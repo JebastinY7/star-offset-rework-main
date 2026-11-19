@@ -1,0 +1,21 @@
+/* Shop Payments (admin) - re-uses the report cards / tables from orders.css, billhistory.css and reports.css */
+.sp-tabs { margin-bottom:16px; }
+.sp-tabs button { padding:7px 20px; font-size:14px; }
+
+.od-stat.recv { --tone:#16a34a; } .od-stat.recv b { color:#15803d; }
+.od-stat.spent { --tone:#2563eb; }
+.od-stat.wait { --tone:#f59e0b; }
+.od-stat.held { --tone:#7c3aed; }
+
+.sp-shop { display:block; }
+.sp-details { max-width:340px; }
+.sp-details > span:first-child { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sp-ref { display:block; margin-top:2px; font-size:12px; color:#6b7280; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow:hidden; text-overflow:ellipsis; }
+.sp-ref.link { color:#92400e; font-weight:600; text-decoration:none; } .sp-ref.link:hover { text-decoration:underline; }
+
+.sp-amt b { font-variant-numeric:tabular-nums; }
+.sp-amt.in b { color:#15803d; }
+.sp-amt.out b { color:#b91c1c; }
+.sp-amt.dim b { color:#9ca3af; font-weight:600; }
+
+@media (max-width: 700px) { .sp-details { max-width:200px; } }

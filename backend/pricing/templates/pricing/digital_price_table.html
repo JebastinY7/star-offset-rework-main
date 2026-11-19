@@ -1,0 +1,370 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Digital Price Table</title>
+
+    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
+    <link rel="stylesheet" href="{% static 'pricing/digital_price_manage.css' %}">
+</head>
+<body>
+
+<div class="manage-page">
+
+    <!-- HEADER -->
+    <div class="manage-header-card">
+
+        <h1 class="manage-title">
+            Digital Price Table
+        </h1>
+
+        <form method="GET"
+              class="manage-toolbar">
+
+            <!-- SEARCH -->
+            <input type="text"
+                   name="search"
+                   value="{{ request.GET.search }}"
+                   placeholder="Search category..."
+                   class="manage-search-input">
+
+            <!-- CATEGORY -->
+            <select name="category"
+                    class="manage-category-filter">
+
+                <option value="">
+                    All Categories
+                </option>
+
+                {% for category in categories %}
+
+                <option value="{{ category.id }}"
+                    {% if request.GET.category == category.id|stringformat:"s" %}
+                        selected
+                    {% endif %}>
+
+                    {{ category.name }}
+
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+            <!-- SEARCH -->
+            <button type="submit"
+                    class="manage-search-btn">
+
+                Search
+
+            </button>
+
+            <!-- RESET -->
+            <a href="{% url 'digital_price_table' %}"
+               class="manage-reset-btn">
+
+                Reset
+
+            </a>
+
+            <!-- BACK -->
+            <a href="{% url 'digital_price_setup' %}"
+               class="manage-back-btn">
+
+                Back
+
+            </a>
+
+        </form>
+
+    </div>
+
+    <!-- TABLE CARD -->
+    <div class="manage-category-card">
+
+        <div class="manage-category-top">
+            <h2 class="manage-category-title">
+                {% if request.GET.category %}
+                    {% for category in categories %}
+                        {% if request.GET.category == category.id|stringformat:"s" %}
+                            {{ category.name }} Rules
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    Digital Pricing Rules
+                {% endif %}
+            </h2>
+
+            <div class="manage-category-actions">
+                <a href="{% url 'print_digital_prices' %}?category={{ request.GET.category }}&search={{ request.GET.search }}"
+                target="_blank"
+                class="manage-print-btn">
+                Print
+                </a>
+
+                {% if request.GET.category %}
+                <a href="{% url 'delete_digital_category' request.GET.category %}"
+                class="manage-delete-table-btn"
+                onclick="return confirm('Delete full category table?')">
+                    Delete Full Table
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- BULK DELETE FORM -->
+        <form method="POST" action="{% url 'delete_selected_digital_prices' %}" id="bulk-delete-form">
+            {% csrf_token %}
+
+            <input type="hidden" name="page" value="{{ page_obj.number }}">
+            <input type="hidden" name="category" value="{{ request.GET.category }}">
+            <input type="hidden" name="search" value="{{ request.GET.search }}">
+
+            <div class="manage-bulk-actions">
+                <button type="submit"
+                        class="manage-bulk-delete-btn"
+                        onclick="return confirm('Delete all selected prices?')"
+                        disabled
+                        id="bulk-delete-btn">
+                    Delete Selected
+                </button>
+            </div>
+
+            <div class="manage-table-wrap">
+                <table class="manage-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="select-all"></th>
+                            <th>Category</th>
+                            <th>GSM</th>
+                            <th>Product</th>
+                            <th>Lamination</th>
+                            <th>Side</th>
+                            <th>Qty</th>
+                            <th>Delivery</th>
+                            <th>Shop Rate</th>
+                            <th>Customer Rate</th>
+                            <th>Discount</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for item in page_obj %}
+                        <tr id="digital-rule-{{ item.id }}">
+                            <td>
+                                <input type="checkbox" name="selected_prices" value="{{ item.id }}" class="row-checkbox">
+                            </td>
+                            <td>{{ item.lamination.product.gsm.category.name }}</td>
+                            <td>{{ item.lamination.product.gsm.name }}</td>
+                            <td>{{ item.lamination.product.name }}</td>
+                            <td>{{ item.lamination.name }}</td>
+                            <td>{{ item.get_side_display }}</td>
+                            <td>
+                                {{ item.min_qty }}
+                                {% if item.max_qty %}- {{ item.max_qty }}{% else %}+{% endif %}
+                            </td>
+                            <td>{{ item.delivery_type.name }}</td>
+                            <td>₹{{ item.shop_rate }}</td>
+                            <td>₹{{ item.customer_rate }}</td>
+                            <td>{{ item.customer_discount }}%</td>
+                            <td>
+                                <div class="manage-action-group">
+                                    <a href="{% url 'edit_digital_price' item.id %}?page={{ page_obj.number }}&category={{ request.GET.category }}&search={{ request.GET.search }}"
+                                    class="manage-edit-btn"
+                                    onclick="localStorage.setItem('digitalRuleId', 'digital-rule-{{ item.id }}')">
+                                        Edit
+                                    </a>
+                                    <a href="#"
+                                    class="manage-delete-btn"
+                                    onclick="openDeleteModal('{% url "delete_digital_price" item.id %}?page={{ page_obj.number }}&category={{ request.GET.category }}&search={{ request.GET.search }}')">
+                                        Delete
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="12" class="manage-empty">No digital prices added</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </form>
+
+    </div>
+
+</div>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="pagination">
+
+    {% if page_obj.has_previous %}
+        <a href="?page=1&category={{ request.GET.category }}&search={{ request.GET.search }}"
+           class="nav-btn">«</a>
+
+        <a href="?page={{ page_obj.previous_page_number }}&category={{ request.GET.category }}&search={{ request.GET.search }}"
+           class="nav-btn">‹</a>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+
+        {% if num == page_obj.number %}
+
+            <span class="page-number active">
+                {{ num }}
+            </span>
+
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+
+            <a href="?page={{ num }}&category={{ request.GET.category }}&search={{ request.GET.search }}"
+               class="page-number">
+               {{ num }}
+            </a>
+
+        {% endif %}
+
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&category={{ request.GET.category }}&search={{ request.GET.search }}"
+           class="nav-btn">›</a>
+
+        <a href="?page={{ page_obj.paginator.num_pages }}&category={{ request.GET.category }}&search={{ request.GET.search }}"
+           class="nav-btn">»</a>
+    {% endif %}
+
+</div>
+{% endif %}
+
+<!-- DELETE MODAL -->
+
+<form method="POST"
+      id="deleteForm">
+
+    {% csrf_token %}
+
+    <div class="delete-modal"
+         id="deleteModal">
+
+        <div class="delete-modal-content">
+
+            <h3>
+                Delete Digital Price
+            </h3>
+
+            <p>
+                Are you sure you want to delete this price?
+            </p>
+
+            <div class="delete-modal-actions">
+
+                <button type="submit"
+                        class="manage-delete-btn">
+
+                    Delete
+
+                </button>
+
+                <button type="button"
+                        class="manage-reset-btn"
+                        onclick="closeDeleteModal()">
+
+                    Cancel
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</form>
+
+<script>
+
+function openDeleteModal(deleteUrl) {
+
+    document
+        .getElementById("deleteModal")
+        .classList.add("show");
+
+    document
+        .getElementById("deleteForm")
+        .action = deleteUrl;
+}
+
+function closeDeleteModal() {
+
+    document
+        .getElementById("deleteModal")
+        .classList.remove("show");
+}
+
+</script>
+
+<script>
+document.querySelectorAll('input[type=number]').forEach(input => {
+
+    input.addEventListener('wheel', function(e) {
+        this.blur();
+    });
+
+});
+</script>
+
+<script>
+window.onload = function () {
+
+    const rowId = localStorage.getItem("digitalRuleId");
+
+    if (rowId) {
+
+        const row = document.getElementById(rowId);
+
+        if (row) {
+
+            row.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+        }
+
+        localStorage.removeItem("digitalRuleId");
+    }
+};
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const selectAll = document.getElementById('select-all');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    const bulkBtn = document.getElementById('bulk-delete-btn');
+
+    function updateBulkBtn() {
+        const anyChecked = Array.from(rowCheckboxes).some(cb => cb.checked);
+        bulkBtn.disabled = !anyChecked;
+    }
+
+    selectAll.addEventListener('change', function () {
+        rowCheckboxes.forEach(cb => cb.checked = selectAll.checked);
+        updateBulkBtn();
+    });
+
+    rowCheckboxes.forEach(cb => {
+        cb.addEventListener('change', function () {
+            if (!cb.checked) selectAll.checked = false;
+            updateBulkBtn();
+        });
+    });
+});
+</script>
+
+</body>
+</html>

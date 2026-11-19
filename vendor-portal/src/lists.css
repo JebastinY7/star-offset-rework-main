@@ -1,0 +1,15 @@
+/* Ready for Pickup + Completed Work pages */
+.sl-card { padding-top:6px; }
+.sl-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:20px 22px 14px; }
+.sl-head h1 { font-size:24px; letter-spacing:-.02em; } .sl-head p { margin-top:4px; color:var(--muted); }
+.sl-tools { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.sl-month { height:44px; padding:0 12px; border:1px solid #d3dce8; border-radius:10px; background:#fff; outline:none; }
+.sl-month:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.18); }
+.sl-err { color:#991b1b; font-size:13px; }
+.sl-tools .aw-btn { height:44px; }
+.sl-wrap { padding:0 22px 18px; }
+.sl-table { min-width:720px; border:1px solid var(--line); }
+.sl-table th { padding:12px 14px; } .sl-table td { padding:12px 14px; }
+.aw-view.sm { min-width:0; padding:7px 22px; }
+span.vchip.completed { background:#bfe6c9; color:#166534; } /* completed = green, same as ready */
+@media (max-width:600px) { .sl-head { padding:16px 14px 10px; } .sl-wrap { padding:0 14px 14px; } .sl-tools { width:100%; } .sl-month { flex:1; } }

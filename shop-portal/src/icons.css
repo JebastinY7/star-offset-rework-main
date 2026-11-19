@@ -1,0 +1,19 @@
+/* Shop portal icons */
+.icon svg { display:block; }
+
+/* coloured icons: every icon carries its own colour in --ico; a container can swap it for its own text colour with --ico-ctx */
+.icon-c svg { stroke:var(--ico-ctx, var(--ico)); }
+.icon-c.tint svg { fill:color-mix(in srgb, var(--ico-ctx, var(--ico)) 16%, transparent); }
+
+/* places that already have their own colour (tinted tiles, solid buttons, active menu item) - the icon follows it */
+[class*="-ico"],
+button.primary, .btn-link.primary, .dx a.dx-btn.accent, .sb-link.active, .sb-help-btn, .chip.active,
+.dt-pager button.on, .wl-quick button.active, .sup-sent-icon { --ico-ctx:currentColor; }
+
+/* Contact Support cards: each way of reaching us keeps its own colour */
+.sup-card .sp-ico { --ico-ctx:initial; }
+.sup-card .sp-ico.phone { background:#dcfce7; }
+.sup-card .sp-ico.whatsapp { background:#e3f8ea; }
+.sup-card .sp-ico.mail { background:#f3f4f6; }
+.sup-card .sp-ico.pin { background:#fee2e2; }
+.dx-hero h1 .icon { vertical-align:-5px; margin-left:2px; }

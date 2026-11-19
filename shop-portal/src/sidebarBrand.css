@@ -1,0 +1,27 @@
+/* Sidebar header: the shop's own name + logo (or a "click here to add logo" prompt), and the forced-password page */
+.sb-brand-text { flex:1; min-width:0; }
+.sb-brand-text strong { display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; font-size:15px; }
+.sb-logo { object-fit:contain; }
+
+.sb-logo-add { width:38px; height:38px; flex-shrink:0; display:grid; place-items:center; padding:0; border-radius:8px;
+  background:rgba(255,255,255,.06); border:1.5px dashed rgba(255,255,255,.4); color:#fff; cursor:pointer; }
+.sb-logo-add:hover:not(:disabled) { background:rgba(255,255,255,.14); border-color:var(--accent); }
+.sb-add-link { display:block; padding:0; margin-top:2px; background:none; border:0; color:var(--accent-light); font-size:11.5px; font-weight:600;
+  text-align:left; text-decoration:underline; text-underline-offset:2px; cursor:pointer; white-space:nowrap; }
+.sb-add-link:disabled, .sb-logo-add:disabled { opacity:.6; cursor:wait; }
+.sb-logo-error { margin:8px 12px 0; padding:7px 10px; border-radius:7px; background:#fee2e2; color:#991b1b; font-size:12.5px; }
+
+.fp-link { background:none; border:0; padding:0; color:inherit; text-decoration:underline; cursor:pointer; font:inherit; }
+
+@media (min-width:769px) {
+  .shell.collapsed .sb-logo-error { display:none; }
+}
+
+/* Shop Profile: logo picture + change / remove */
+.sp-logo-img { flex:none; width:78px; height:78px; object-fit:contain; background:#fff; border-radius:16px; padding:6px; }
+.sp-logo-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.sp-logo-btn { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:7px; border:1px solid rgba(255,255,255,.35);
+  background:rgba(255,255,255,.1); color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+.sp-logo-btn:hover:not(:disabled) { background:rgba(255,255,255,.2); }
+.sp-logo-btn:disabled { opacity:.6; cursor:wait; }
+.sp-logo-err { margin:8px 0 0; font-size:13px; color:#fecaca; }

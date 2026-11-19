@@ -1,0 +1,3024 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="bill-page page-wrapper">
+  
+  <h2>
+    {% if bill %}Edit Bill{% else %}Create Bill{% endif %}
+  </h2>
+
+  {% if messages %}
+  {% for message in messages %}
+    <div class="alert">{{ message }}</div>
+  {% endfor %}
+  {% endif %}
+
+
+  <form method="POST" action="{% url 'save_bill' %}">
+    {% csrf_token %}
+    <input type="hidden" name="bill_id" value="{{ bill.id }}">
+    <input type="hidden" name="return_page" value="{{ request.GET.return_page }}">
+    <input type="hidden" name="from_history" value="{{ request.GET.from_history }}">
+    <input type="hidden" name="items_data" id="itemsData">
+    <input type="hidden" name="customer_id" id="customerId">
+
+  <div class="bill-card">
+    <label>Search Customer: </label>
+    <input type="text" id="customerInput" placeholder="Enter a Mobile /  ID">
+    {% if selected_order %}
+      <input type="hidden" id="selectedCustomerName" value="{{ selected_order.customer.name }}">
+      <input type="hidden" id="selectedCustomerPhone" value="{{ selected_order.customer.phone }}">
+      <input type="hidden" id="selectedCustomerId" value="{{ selected_order.customer.id }}">
+      <input type="hidden" id="selectedCustomerCategory" value="{{ selected_order.customer.category }}">
+      <input type="hidden" id="selectedCustomerIsMember" value="{{ selected_order.customer.is_member|yesno:'true,false' }}">
+      <input type="hidden" id="selectedCustomerMemberId" value="{{ selected_order.customer.member_id }}">
+      <input type="hidden" id="selectedCustomerPoints" value="{{ selected_order.customer.points }}">
+      <input type="hidden" id="selectedCustomerExpiry" value="{{ selected_order.customer.expiry_date|date:'Y-m-d' }}">
+      <input type="hidden" id="selectedCustomerDue" value="{{ selected_order.customer.due_amount }}">
+      <input type="hidden" id="orderAdvance" value="{{ selected_order.advance_paid|default:0 }}">
+      <input type="hidden" name="order_id" value="{{ selected_order.id }}">
+    {% endif %}
+
+    <div id="customerResult" class="bill-customer-result">
+      <!-- Dynamic -->
+    </div>
+  </div>
+
+  <!-- Items -->
+  <div class="bill-card">
+
+    <div class="bill-item-input">
+
+    <!-- Billing Type -->
+    <div class="bill-field-title">
+        <label>Select Billing Type</label>
+
+        <div class="billing-mode-box">
+            <select id="billingMode">
+                <option value="normal">Normal print</option>
+                <option value="digital">Digital print</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Items -->
+    <div class="bill-field-title">
+        <h3>Items</h3>
+    </div>
+
+    <!-- NORMAL -->
+    <div id="normalBillingFields" class="billing-grid-normal">
+
+        <select id="itemCategory">
+            <option value="">Select Category</option>
+            <option value="manual">OTHERS</option>
+
+            {% for category in categories %}
+            <option value="{{ category.id }}">
+                {{ category.name }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <input type="text"
+                id="manualItemName"
+                placeholder="Manual Item Name"
+                style="display:none;">
+
+        <select id="itemSize">
+            <option value="">Select Size</option>
+        </select>
+
+        <select id="itemVariant">
+            <option value="">Select Variant</option>
+        </select>
+
+        <input type="number"
+               id="itemQty"
+               placeholder="Qty">
+        
+        <input type="number"
+                id="itemJob"
+                placeholder="Job"
+                value="1">
+
+    </div>
+
+    <!-- DIGITAL -->
+    <div id="digitalBillingFields"
+         class="billing-grid-digital"
+         style="display:none;">
+
+        <select id="digitalCategory">
+            <option value="">
+                Select Category
+            </option>
+
+            {% for category in digital_categories %}
+            <option value="{{ category.id }}">
+                {{ category.name }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <select id="digitalGsm">
+            <option value="">
+                Select GSM
+            </option>
+        </select>
+
+        <select id="digitalProduct">
+            <option value="">
+                Select Product
+            </option>
+        </select>
+
+        <select id="digitalLamination">
+            <option value="">
+                Select Lamination
+            </option>
+        </select>
+
+        <select id="digitalSide">
+            <option value="">Select Side</option>
+            <option value="single">Single Side</option>
+            <option value="double">Double Side</option>
+        </select>
+
+        
+
+        <select id="digitalDeliveryType">
+            <option value="">
+                Select Delivery
+            </option>
+
+            {% for delivery in delivery_types %}
+                <option value="{{ delivery.id }}">
+                    {{ delivery.name }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <input type="number"
+               id="digitalQty"
+               placeholder="Qty">
+
+        <input type="number"
+                id="digitalJob"
+                placeholder="Job"
+                value="1">
+    </div>
+
+    <!-- PRICE -->
+    <div class="auto-bill-box">
+
+        <input type="number"
+               id="itemPrice"
+               placeholder="Price">
+
+        <input type="number"
+               id="itemDiscountValue"
+               placeholder="Discount ₹">
+
+        <input type="text"
+               id="itemTotalPreview"
+               placeholder="Total"
+               readonly>
+
+    </div>
+
+    <input type="hidden"
+           id="itemDiscount"
+           value="0">
+
+    <!-- EXTRA -->
+    <div class="extra-charge-box">
+
+        <input type="text"
+               id="extraPurpose"
+               placeholder="Purpose of Extra Charge">
+
+        <input type="number"
+               id="itemExtraCharge"
+               placeholder="Extra Charge ₹">
+
+    </div>
+
+    <!-- BUTTON -->
+    <button type="button"
+            class="bill-add-btn"
+            onclick="addItem()">
+        Add
+    </button>
+
+</div>
+
+    <table class="bill-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Qty</th>
+          <th>Job</th>
+          <th>Price</th>
+          <th>Discount</th>
+          <th>Extra Charge</th>
+          <th>Total</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+
+      <tbody id="billItems"></tbody>
+      <tbody id="billItemsBody"></tbody>
+    </table>
+  </div>
+
+  <div class="bill-card summary-grid">
+
+  
+
+
+  <div class="bill-section">
+    <h4>Previous Due</h4>
+
+    <div class="bill-summary-row">
+      <span>Previous Due</span>
+      <strong id="previousDueDisplay">₹0</strong>
+    </div>
+
+    <div class="bill-field">
+      <label>Pay Old Due</label>
+      <input type="number" id="oldDuePayment" name="old_due_payment" oninput="calculateTotal()">
+    </div>
+
+    <div class="bill-summary-row">
+      <span>Remaining Due</span>
+      <strong id="remainingOldDue">₹0</strong>
+    </div>
+  </div>
+
+
+  <div class="bill-section bill">
+    <h4>Payment</h4>
+
+    <div class="bill-field">
+      <label>Pay Current Bill</label>
+      <input type="number" id="paidAmount" name="paid_amount" oninput="calculateTotal()">
+    </div>
+
+    <div class="bill-summary-row">
+      <span>Total Due</span>
+      <strong id="dueAmount">₹0</strong>
+    </div>
+
+    <div class="bill-summary-row">
+      <span>Status</span>
+      <strong id="paymentStatus">PAID</strong>
+    </div>
+  </div>
+
+  <div class="bill-section">
+    <h4>Summary</h4>
+
+    <div class="bill-summary-row">
+      <span>Gross Total:</span>
+      <strong id="grossAmount">₹0</strong>
+    </div>
+
+    <div class="bill-field">
+      <label>Extra Discount</label>
+      <input type="number" id="extraDiscount" name="extraDiscount" oninput="calculateTotal()">
+    </div>
+
+    <div class="bill-summary-row">
+      <span>Discount:</span>
+      <strong id="discountAmount">₹0</strong>
+    </div>
+
+    <div class="bill-summary-row">
+      <span>Net Total</span>
+      <strong id="netAmount">₹0</strong>
+    </div>
+
+    <div class="bill-summary-row final">
+      <span>Final Amount</span>
+      <strong id="finalAmount">₹0</strong>
+    </div>
+  </div>
+
+</div>
+
+  
+  
+
+  <button type="submit" onclick="prepareData(event)" class="bill-submit-btn">
+    {% if bill %}Update Bill{% else %}Generate Bill{% endif %}
+  </button>
+</form>
+
+</div>
+
+<script>
+  let items = [];
+  
+  const input = document.getElementById("customerInput");
+  const resultBox = document.getElementById("customerResult");
+  
+  input.addEventListener("input", function () {
+    let value = this.value.trim();
+
+    if (this.value.match(/.+\s-\s.*/)) {
+      resultBox.innerHTML = "";
+      return;
+    }
+    let query = this.value;
+    
+    if (query.length < 2) {
+      resultBox.innerHTML = "";
+      return;
+    }
+    
+    fetch(`/live-search-customers/?q=${query}`)
+    .then(res => res.json())
+    .then(data => {
+      
+      let customers = data.customers;
+      
+      if (customers.length === 0) {
+        resultBox.innerHTML = "<div class='not-found'>No customer found</div>";
+        return;
+      }
+      
+      let html = "";
+      
+      customers.forEach(c => {
+        
+        html += `
+        <div class="suggestion-item"
+          onclick='selectCustomer(${JSON.stringify(c)})'>
+          <strong>${c.name}</strong> - ${c.phone}
+        </div>
+        `;
+      });
+      
+      resultBox.innerHTML = html;
+    });
+  });
+
+function prepareData(event) {
+  if (!document.getElementById("customerId").value) {
+    showToast("Select customer first");
+    event.preventDefault();
+    return false;
+  }
+
+  if (items.length === 0) {
+    showToast("Add at least one item");
+    event.preventDefault();
+    return false;
+  }
+  document.getElementById("itemsData").value = JSON.stringify(items);
+}
+
+function selectCustomer(c){
+
+  document.getElementById("customerId").value = c.id;
+  window.selectedCustomer = c;
+
+  document.getElementById("customerInput").value =
+      c.name + " - " + c.phone;
+
+  document.getElementById("customerResult").innerHTML = "";
+
+  window.previousDue = parseFloat(c.due_amount || 0);
+
+  document.getElementById("oldDuePayment").value = 0;
+
+  document.getElementById("previousDueDisplay").innerText =
+    "₹" + window.previousDue.toFixed(2);
+
+  document.getElementById("remainingOldDue").innerText =
+    "₹" + window.previousDue.toFixed(2);
+
+  let today = new Date();
+  let expiry = c.expiry_date ? new Date(c.expiry_date) : null;
+
+  let diffDays = expiry
+    ? Math.ceil((expiry - today) / (1000 * 60 * 60 * 24)) : null;
+
+  // Billing Logic
+  if (c.category.toLowerCase() === "shop") {
+    window.selectedCustomerType = "Shop";
+  }
+  else if (c.is_member && c.expiry_date && diffDays >= 0) {
+    window.selectedCustomerType = "Member"
+  }
+  else {
+    window.selectedCustomerType = "Customer"
+  }
+  window.isMember =
+  c.is_member &&
+  c.expiry_date &&
+  diffDays >= 0;
+
+let memberStatus = "";
+let disablePoints = false;
+
+if (c.is_member && c.expiry_date && diffDays >= 0) {
+  memberStatus = `<p class="active">🟢 Active (${diffDays} days left)</p>`;
+} 
+else if (c.is_member && c.expiry_date && diffDays < 0) {
+  memberStatus = `<p class="expired">🔴 Expired (${Math.abs(diffDays)} days ago)</p>`;
+  disablePoints = true;
+} 
+else {
+  memberStatus = `<p class="non-member">⚪ Non Member</p>`;
+  disablePoints = true;
+}
+
+if (c.due_amount > 0) {
+  memberStatus += `<p class="expired">⚠ Due Pending: ₹${c.due_amount}</p>`;
+}
+
+document.getElementById("customerResult").innerHTML = `
+  <div class="cust-box">
+    <p><strong>Name:</strong> ${c.name}</p>
+    <p><strong>Phone:</strong> ${c.phone}</p>
+    <p><strong>Category:</strong> ${c.category}</p>
+    <p><strong>Due:</strong> ₹${c.due_amount || 0}</p>
+
+    ${c.is_member ? `
+      <p><strong>Member ID:</strong> ${c.member_id}</p>
+      <p><strong>Expiry:</strong> ${c.expiry_date 
+      ? new Date(c.expiry_date).toLocaleDateString('en-GB').replace(/\//g, '-') :'-'}</p>
+    ` : ""}
+
+    ${memberStatus}
+  </div>
+`;
+
+// 🔴 Disable points if expired
+let pointsInput = document.getElementById("points");
+
+if (pointsInput) {
+  if (disablePoints || (c.due_amount > 0)) {
+    pointsInput.value = 0;
+    pointsInput.disabled = true;
+  } else {
+    pointsInput.disabled = false;
+  }
+}
+
+// Paid Amount Logic
+  if (c.due_amount > 0) {
+    document.getElementById("paidAmount").value = "";
+  } 
+  else {
+    calculateTotal();
+  }
+
+let categoryId = document.getElementById("itemCategory").value;
+
+if (categoryId && window.selectedCustomerType) {
+  fetch(`/get-discount/?category_id=${categoryId}&customer_type=${window.selectedCustomerType}`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("itemDiscount").value = data.discount;
+
+      // Refresh price + total preview
+      updatePrice();
+    });
+  }
+}
+
+
+
+/* Discount */
+function parseDiscount(total, discountInput){
+  if(!discountInput) return 0;
+
+  let value = parseFloat(discountInput);
+
+  if(isNaN(value)) return 0;
+
+  // Always treat as %
+  return total * (value / 100);
+}
+
+/* =========================================
+   BILL BOOK CUSTOM PRICE CALCULATOR
+   (Category: Bill Book | Normal Print)
+   Fully JS-calculated, does NOT use PriceRule table.
+
+   qty        -> number of BOOKS entered in the Qty field
+   job        -> repeat multiplier (same as other categories)
+   variantText-> lower-cased variant name, used to pick paper type:
+                   contains "dupl"           -> Duplicate book (original + carbon sheet)
+                   contains "low"            -> Original sheet uses Low Quality rate
+                   anything else (default)   -> Original sheet, Normal quality
+   sizeText   -> lower-cased size name, used to pick the size profile:
+                   contains "legal"          -> Legal Paper profile
+                   contains "a5"             -> A5 profile (A4 paper/print/design, own binding)
+                   contains "a6"             -> A6 profile (A4 paper/print/design, own binding)
+                   anything else (default)   -> A4 profile
+
+   Used identically by addItem() and updatePrice() (and kept in sync with
+   Order/Quotation pages) so pricing never disagrees anywhere.
+========================================= */
+/* =========================================
+   BILL BOOK PRINT COST (Notice-style step table)
+   Same breakpoint tables/behavior as the Notice category's print
+   charge, but keyed on total PAPERS (books x 100) instead of pieces.
+   Values come straight from the size-wise printing charge sheet.
+========================================= */
+/* =========================================
+   BILL BOOK ROUND-OFF
+   Only for Bill Book category totals.
+     last digit 1-4 -> round UP to nearest 5
+     last digit 6-9 -> round UP to nearest 10
+     last digit 0 or 5 -> unchanged
+   e.g. 422 -> 425, 426 -> 430
+========================================= */
+function billBookRoundOff(amount) {
+
+    let rounded = Math.round(amount);
+    let lastDigit = rounded % 10;
+
+    if (lastDigit === 0 || lastDigit === 5) {
+        return rounded;
+    } else if (lastDigit >= 1 && lastDigit <= 4) {
+        return rounded + (5 - lastDigit);
+    } else {
+        return rounded + (10 - lastDigit);
+    }
+}
+
+function billBookPrintCost(totalPapers, isLegal, isA5, isA6) {
+
+    const A4_TABLE  = [[100,150],[200,180],[300,200],[500,250],[1000,250],[2000,500],[3000,750],[4000,1000],[5000,1250],[10000,2500]];
+    const A5_TABLE  = [[100,150],[200,150],[300,180],[500,200],[1000,250],[2000,250],[3000,500],[4000,500],[5000,750],[10000,1250]];
+    const A6_TABLE  = [[400,150],[600,150],[800,180],[1200,200],[1500,250],[4000,250],[6000,500],[8000,750],[12000,1000],[15000,1250],[40000,2500]];
+    const LGL_TABLE = [[100,180],[200,200],[300,220],[500,270],[1000,300],[2000,600],[3000,900],[4000,1200],[5000,1500],[10000,3000]];
+    
+
+    let table = isLegal ? LGL_TABLE : (isA5 ? A5_TABLE : (isA6 ? A6_TABLE : A4_TABLE));
+
+    if (totalPapers <= 0) return 0;
+
+    for (let i = 0; i < table.length; i++) {
+        if (totalPapers <= table[i][0]) {
+            return table[i][1];
+        }
+    }
+
+    /* Beyond the last listed breakpoint: extrapolate using the slope
+       between the last two breakpoints (per 1000 papers). */
+    let last = table[table.length - 1];
+    let prev = table[table.length - 2];
+    let ratePer1000 = (last[1] - prev[1]) / ((last[0] - prev[0]) / 1000);
+    let extraSteps = Math.ceil((totalPapers - last[0]) / 1000);
+
+    return Math.round((last[1] + (extraSteps * ratePer1000)) * 100) / 100;
+}
+
+function calculateBillBookPrice(qty, job, variantText, sizeText) {
+
+    qty = parseFloat(qty) || 0;
+    job = parseFloat(job) || 1;
+    variantText = (variantText || "").toLowerCase();
+    sizeText = (sizeText || "").toLowerCase();
+
+    const PAPERS_PER_BOOK = 100;
+
+    let totalBooks = qty;
+    let totalPapers = totalBooks * PAPERS_PER_BOOK;
+
+    let isLegal = sizeText.includes("legal");
+    let isA5 = sizeText.includes("a5");
+    let isA6 = sizeText.includes("a6");
+
+        /* ---- Paper / design profile ----
+       Original-sheet and duplicate-sheet rates both scale down by size:
+       A4 = base, A5 = base/2, A6 = base/4.
+       Design charge: A4 = ₹150, A5 = ₹100, A6 = ₹100, Legal = ₹200.
+       Legal Paper uses its own rates entirely. Print cost comes from the
+       Notice-style step tables above (size-specific), not a flat slab.
+    */
+    let originalRate, duplicateRate, designChargeAmount;
+
+        if (isLegal) {
+        // Legal: 500 original papers = ₹300 -> ₹0.60/sheet, 500 duplicate = ₹200 -> ₹0.40/sheet
+        originalRate = 0.60;
+        duplicateRate = 0.40;
+        designChargeAmount = 200; // one-time design charge per line item
+    } else {
+        // Base original-sheet rate (A4 full rate); A5 is half, A6 is a quarter.
+        // "Low" quality only ever applies to the Original sheet, at the A4 base rate.
+        let baseOriginalRate = variantText.includes("low") ? 0.35 : 0.42;
+        let baseDuplicateAmount = 0.30;
+
+        if (isA5) {
+            originalRate = baseOriginalRate / 2; // A5 = 0.21 (or 0.175 if low)
+            duplicateRate = baseDuplicateAmount / 2;
+            designChargeAmount = 100;  
+        } else if (isA6) {
+            originalRate = baseOriginalRate / 4; // A6 = 0.105 (or 0.0875 if low)
+            duplicateRate = baseDuplicateAmount / 4;
+            designChargeAmount = 100;   
+        } else {
+            originalRate = baseOriginalRate;  // A4 = 0.42 (or 0.35 if low)
+            duplicateRate = baseDuplicateAmount;
+            designChargeAmount = 150;
+        }
+        
+    }
+
+    /* ---- Paper rate (per sheet) ----
+       A "Duplicate" bill book has TWO sheets per page (original + carbon
+       copy), so its paper cost is Original-rate + Duplicate-rate combined.
+       "Low" only ever changes the Original sheet's rate.
+    */
+    let paperRate = variantText.includes("dupl")
+        ? originalRate + duplicateRate   // Dupl. book = original sheet + carbon sheet
+        : originalRate;                  // Original-only book = just the original sheet
+
+    let paperCost = Math.round(totalPapers * paperRate * 100) / 100;
+
+    /* ---- Print cost: Notice-style step table, by size ---- */
+    let printCost = billBookPrintCost(totalPapers, isLegal, isA5, isA6);
+
+    /* ---- Design charge: one time per line item ---- */
+    let designCharge = totalBooks > 0 ? designChargeAmount : 0;
+
+    /* ---- Binding cost: per book, slab based on number of books AND size ---- */
+    let bindingRate;
+
+    if (isLegal) {
+        if (totalBooks <= 10) {
+            bindingRate = 60;
+        } else if (totalBooks <= 30) {
+            bindingRate = 50;
+        } else {
+            bindingRate = 40;
+        }
+    } else if (isA5) {
+        if (totalBooks <= 10) {
+            bindingRate = 30;
+        } else if (totalBooks <= 30) {
+            bindingRate = 25;
+        } else {
+            bindingRate = 20;
+        }
+    } else if (isA6) {
+        if (totalBooks <= 10) {
+            bindingRate = 20;
+        } else if (totalBooks <= 30) {
+            bindingRate = 15;
+        } else {
+            bindingRate = 12;
+        }
+    } else {
+        // Default: A4
+        if (totalBooks <= 10) {
+            bindingRate = 50;
+        } else if (totalBooks <= 30) {
+            bindingRate = 40;
+        } else {
+            bindingRate = 30;
+        }
+    }
+
+    let bindingCost = totalBooks * bindingRate;
+
+    let gross = Math.round((paperCost + printCost + designCharge + bindingCost) * job * 100) / 100;
+
+    /* ---- Round off: last digit 1-4 -> nearest 5, last digit 6-9 -> nearest 10 ---- */
+    gross = billBookRoundOff(gross);
+
+    return gross;
+}
+
+/* =========================================
+   NOTICE CUSTOM PRICE CALCULATOR
+   Fully JS-calculated, does NOT use PriceRule table.
+
+   qty         -> number of notices/copies entered in the Qty field
+   job         -> repeat multiplier (same as other categories)
+   sizeText    -> lower-cased size name, used only for the one-time
+                  Design charge:
+                    contains "legal"/"lgl" -> ₹200
+                    contains "a5"          -> ₹100
+                    anything else (A4 default) -> ₹150
+   variantText -> lower-cased variant name, used only for side:
+                    contains "double" -> Print cost is doubled
+                    anything else (Single, default) -> Print cost as-is
+
+   Paper cost is a flat ₹0.42 per notice, same for every size and side.
+
+   Print cost is a range-based slab that repeats every 1000 copies:
+     qty <= 100        -> ₹150
+     100 < qty <= 200   -> ₹180
+     200 < qty < 500    -> ₹200
+     500 <= qty <= 1000 -> ₹250
+   For qty above 1000, add ₹250 for every full 1000, then apply the
+   same slab to whatever remains (e.g. 1200 = 1000's ₹250 + 200's
+   ₹180 = ₹430; 2100 = 2×₹250 + 100's ₹150 = ₹650).
+   Double Side simply doubles this print cost; paper and design stay
+   the same either way.
+
+   Used identically by addItem() and updatePrice().
+========================================= */
+function calculateNoticePrice(qty, job, sizeText, variantText) {
+
+    qty = parseFloat(qty) || 0;
+    job = parseFloat(job) || 1;
+    sizeText = (sizeText || "").toLowerCase();
+    variantText = (variantText || "").toLowerCase();
+
+    let isLegal = sizeText.includes("legal") || sizeText.includes("lgl");
+    let isA5 = sizeText.includes("a5");
+
+    /* ---- Paper rate (per notice), by size ---- */
+    let paperRate = isLegal ? 0.60 : (isA5 ? 0.21 : 0.42); // A4 default
+
+    let paperCost = Math.round(qty * paperRate * 100) / 100;
+
+    /* ---- Design charge: one time per line item, by size ---- */
+    let baseDesignCharge = 0;
+
+    if (qty > 0) {
+        baseDesignCharge = isLegal ? 200 : (isA5 ? 100 : 150); // A4 default
+    }
+
+    /* ---- Print cost: range-based slab, repeats every 1000 copies ---- */
+    function printSlab(q) {
+        if (q <= 0) return 0;
+        if (q <= 100) return 150;
+        if (q <= 200) return 180;
+        if (q < 500) return 200;
+        return 250; // 500 - 1000
+    }
+
+    let fullThousands = Math.floor(qty / 1000);
+    let remainder = qty % 1000;
+
+    let printCost = (fullThousands * 250) + printSlab(remainder);
+    let designCharge = baseDesignCharge;
+
+    /* ---- Double Side: print cost AND design charge both doubled ---- */
+    if (variantText.includes("double")) {
+        printCost = printCost * 2;
+        designCharge = designCharge * 2;
+    }
+
+    let gross = Math.round((paperCost + designCharge + printCost) * job * 100) / 100;
+
+    return gross;
+}
+
+/* ADD ITEM */
+function addItem() {
+
+  let categoryDropdown = document.getElementById("itemCategory");
+  let sizeDropdown = document.getElementById("itemSize");
+
+  let categoryId = categoryDropdown.value;
+
+  /* MANUAL ENTRY */
+if (categoryId === "manual") {
+
+    let manualName =
+        document.getElementById("manualItemName").value;
+
+    let qty =
+        parseFloat(document.getElementById("itemQty").value || 0);
+
+    let job =
+        parseFloat(document.getElementById("itemJob").value || 1);
+
+    let price =
+        parseFloat(document.getElementById("itemPrice").value || 0);
+
+    let extraCharge =
+        parseFloat(document.getElementById("itemExtraCharge").value || 0);
+
+    let gross = qty * price * job;
+
+    let discount =
+    parseFloat(
+        document.getElementById("itemDiscountValue").value || 0
+    );
+
+    let total =
+        gross - discount + extraCharge;
+
+    if (!manualName || qty <= 0 || price <= 0) {
+
+        showToast("Enter manual item details");
+
+        return;
+    }
+
+    items.push({
+
+        billingType: "manual",
+
+        name: manualName,
+
+        qty: qty,
+
+        job: job,
+
+        price: price,
+
+        gross: gross,
+
+        discount: parseFloat(
+            document.getElementById("itemDiscountValue").value || 0
+        ),
+
+        extraCharge: extraCharge,
+
+        extraPurpose:
+            document.getElementById("extraPurpose").value || "",
+
+        total: total
+    });
+
+    renderItems();
+
+    calculateTotal();
+
+    // Clear Digital Fields
+document.getElementById("digitalCategory").value = "";
+
+document.getElementById("digitalGsm").innerHTML =
+    '<option value="">Select GSM</option>';
+
+document.getElementById("digitalProduct").innerHTML =
+    '<option value="">Select Product</option>';
+
+document.getElementById("digitalLamination").innerHTML =
+    '<option value="">Select Lamination</option>';
+
+document.getElementById("digitalSide").value = "";
+
+document.getElementById("digitalDeliveryType").value = "";
+
+document.getElementById("digitalQty").value = "";
+
+document.getElementById("digitalJob").value = 1;
+
+// Common Fields
+document.getElementById("itemPrice").value = "";
+
+document.getElementById("itemDiscountValue").value = "";
+
+document.getElementById("itemTotalPreview").value = "";
+
+document.getElementById("itemExtraCharge").value = "";
+
+document.getElementById("extraPurpose").value = "";
+
+return;
+}
+
+  let categoryName = categoryDropdown.options[categoryDropdown.selectedIndex].text;
+
+  let sizeId = sizeDropdown.value;
+  let sizeName = sizeDropdown.options[sizeDropdown.selectedIndex].text;
+
+  let qty = parseFloat(document.getElementById("itemQty").value);
+  let job = parseFloat(document.getElementById("itemJob").value || 1);
+
+  let variantDropdown = document.getElementById("itemVariant");
+  let variantId = variantDropdown.value;
+  let variantName = variantDropdown.options[variantDropdown.selectedIndex].text;
+
+  let previewDiscount = parseFloat(document.getElementById("itemDiscountValue").value) || 0;
+  let previewTotal = parseFloat(document.getElementById("itemTotalPreview").value) || 0;
+
+  let extraPurpose = document.getElementById("extraPurpose").value.trim() || "";
+  let extraCharge = parseFloat(document.getElementById("itemExtraCharge").value) || 0;
+
+  let billingMode = document.getElementById("billingMode").value;
+
+  /* =========================================
+   DIGITAL BILLING ADD ITEM
+========================================= */
+
+if (billingMode === "digital") {
+
+    let categoryDropdown =
+        document.getElementById("digitalCategory");
+
+    let gsmDropdown =
+        document.getElementById("digitalGsm");
+
+    let productDropdown =
+        document.getElementById("digitalProduct");
+    
+    
+
+let laminationDropdown =
+    document.getElementById("digitalLamination");
+
+let laminationId =
+    laminationDropdown.value;
+
+let laminationName =
+    laminationDropdown.options[
+        laminationDropdown.selectedIndex
+    ].text;
+
+
+
+    let deliveryDropdown =
+        document.getElementById("digitalDeliveryType");
+
+    let qty =
+        parseFloat(document.getElementById("digitalQty").value);
+
+    let price =
+        parseFloat(document.getElementById("itemPrice").value || 0);
+
+    let discount =
+        parseFloat(document.getElementById("itemDiscountValue").value || 0);
+
+    let total =
+        parseFloat(document.getElementById("itemTotalPreview").value || 0);
+
+    let extraCharge =
+        parseFloat(document.getElementById("itemExtraCharge").value || 0);
+
+    let extraPurpose =
+        document.getElementById("extraPurpose").value || "";
+
+    if (
+        !categoryDropdown.value ||
+        !gsmDropdown.value ||
+        !productDropdown.value ||
+        !qty
+    ) {
+
+        alert("Select digital print details");
+
+        return;
+    }
+
+    let sideDropdown =
+    document.getElementById("digitalSide");
+
+let sideValue =
+    sideDropdown.value;
+
+let sideText =
+    sideDropdown.options[
+        sideDropdown.selectedIndex
+    ].text;
+
+let categoryName =
+    categoryDropdown.options[categoryDropdown.selectedIndex].text;
+
+let itemName = categoryName;
+
+// Show GSM and Size for all except Letter Pad
+if (categoryName.trim().toLowerCase() !== "visiting card") {
+    itemName += ` - ${gsmDropdown.options[gsmDropdown.selectedIndex].text}`;
+    itemName += ` - ${productDropdown.options[productDropdown.selectedIndex].text}`;
+}
+
+itemName += ` - ${laminationName}`;
+itemName += ` - ${sideText}`;
+itemName += ` - ${deliveryDropdown.options[deliveryDropdown.selectedIndex].text}`;
+
+    
+
+    items.push({
+
+        billingType: "digital print",
+        job: parseFloat(
+            document.getElementById("digitalJob").value || 1
+        ),
+        name: itemName,
+        categoryId: categoryDropdown.value,
+        sizeId: gsmDropdown.value,
+        variantId: productDropdown.value,
+        laminationId: laminationId,
+        deliveryTypeId: deliveryDropdown.value,
+        deliveryTypeName:
+            deliveryDropdown.options[
+                deliveryDropdown.selectedIndex
+            ].text,
+        laminationName: laminationName,
+
+        side: sideValue,
+
+        sideName: sideText,
+
+        qty: qty,
+
+        price: price,
+
+        gross: price,
+
+        discount: discount,
+
+        extraCharge: extraCharge,
+
+        extraPurpose: extraPurpose,
+
+        total: total
+    });
+
+    renderItems();
+
+    calculateTotal();
+
+    clearBillingFields();
+
+    return;
+}
+
+  if (!categoryId || !sizeId || !variantId || !qty) {
+    showToast("Select category, size, variant and qty");
+    return;
+  }
+
+  // Fetch correct price from backend
+  fetch(`/get-price/?category_id=${categoryId}&size_id=${sizeId}&variant_id=${variantId}&qty=${qty}`)
+    .then(response => response.json())
+    .then(data => {
+
+      let price = parseFloat(data.price);
+      let allowCustomPricing =
+    categoryName.toLowerCase().includes("print out") ||
+    categoryName.toLowerCase().includes("train ticket") ||
+    categoryName.toLowerCase().includes("online application") ||
+    categoryName.toLowerCase().includes("bill book") ||
+    categoryName.toLowerCase().includes("notice");
+
+
+      if (!price && !allowCustomPricing) {
+        showToast("No pricing rule found");
+        return;
+      }
+
+      let grossAmount = 0;
+
+      let variantText = variantName.toLowerCase();
+
+      let isBlackSingle = variantText.includes("black s");
+
+      let isBlackDouble = variantText.includes("black d");
+
+      let isInkjetSingle = variantText.includes("color inkjet s");
+
+      let isInkjetDouble = variantText.includes("color inkjet d");
+        
+      if (
+          categoryName.toLowerCase().includes("banner") ||
+          categoryName.toLowerCase().includes("poster") ||
+          categoryName.toLowerCase().includes("letter pad") ||
+          categoryName.toLowerCase().includes("printing") ||
+          categoryName.toLowerCase().includes("invitation")
+        ) {
+          grossAmount = price * job;
+        }
+        else if (categoryName.toLowerCase().includes("notice")) {
+          grossAmount = calculateNoticePrice(qty, job, sizeName.toLowerCase(), variantText);
+          price = grossAmount;
+        }
+        else if (categoryName.toLowerCase().includes("bill book")) {
+          grossAmount = calculateBillBookPrice(qty, job, variantText, sizeName.toLowerCase());
+          price = grossAmount;
+        }
+        else if (categoryName.toLowerCase().includes("train ticket")) {
+          let sizeText = sizeName.toLowerCase();
+
+          if (sizeText.includes("minimum")) {
+            grossAmount = 50 + ((qty - 1) * 20);
+          }
+          else if (sizeText.includes("thakkal")) {
+            grossAmount = 75 + ((qty - 1) * 20);
+          }
+          else if (sizeText.includes("premium")) {
+            grossAmount = 100 + ((qty - 1) * 20);
+          }
+        }
+        else if (categoryName.toLowerCase().includes("online application")) {
+          let sizeText = sizeName.toLowerCase();
+          
+          if (
+            sizeText.includes("patta") ||
+            sizeText.includes("chitta") ||
+            sizeText.includes("ec")
+            ) {
+
+            if (qty <= 3) {
+                grossAmount = 20;
+            } else {
+                grossAmount = 20 + ((qty - 3) * 5);
+            }
+          }
+          else {
+            grossAmount = qty * price * job;
+          }
+        }
+        else if (
+          categoryName.toLowerCase().includes("print out")
+          ) {
+
+          let sizeText = sizeName.toLowerCase();
+
+          if (sizeText.includes("sticker")) {
+
+        gross = qty * price * job;
+
+    }
+
+          else if (
+              isBlackSingle ||
+              isBlackDouble
+            ) {
+              
+              if (
+                sizeText.includes("a4") ||
+                sizeText.includes("legal")
+                ) {
+                  
+                  if (isBlackSingle) {
+
+          if (qty <= 10) {
+            grossAmount = 10 + ((qty - 1) * 3);
+            price = grossAmount;
+          }
+          else if (qty <= 20) {
+            grossAmount = 37 + ((qty - 10) * 3);
+            price = grossAmount;
+          }
+          else {
+            grossAmount = qty * price * job;
+          }
+        }
+        else if (isBlackDouble) {
+
+          if (qty <= 10) {
+            grossAmount = 10 + ((qty - 1) * 4);
+            price = grossAmount;
+          }
+          else if (qty <= 20) {
+            grossAmount = 46 + ((qty - 10) * 4);
+            price = grossAmount;
+          }
+          else {
+            grossAmount = qty * price * job;
+          }
+        }
+                }
+                else if (
+                  sizeText.includes("a3")
+                  ) {
+                    
+                    if (isBlackSingle) {
+
+                      if (qty <= 9) {
+                        grossAmount = 15 + ((qty - 1) * 7);
+                        price = grossAmount;
+                      }
+                      else {
+                        grossAmount = qty * price * job;
+                      }
+                    }
+                    
+                    else if (isBlackDouble) {
+
+                      if (qty <= 9) {
+                        grossAmount = 20 + ((qty - 1) * 7);
+                        price = grossAmount
+                      }
+                      else {
+                        grossAmount = qty * price * job;
+                      }
+                    }
+                  }
+                  else {
+
+                    grossAmount = qty * price * job;
+                  }
+                }
+
+                /* COLOR INKJET */
+
+                else if (
+                  isInkjetSingle ||
+                  isInkjetDouble
+                  ) {
+
+                  if (
+                    sizeText.includes("a4") ||
+                    sizeText.includes("legal")
+                    ) {
+                      
+                      if (isInkjetSingle) {
+
+                        if (qty <= 10) {
+                          grossAmount = 15 + ((qty - 1) * 10);
+                          price = grossAmount;
+                        }
+
+                        else {
+                          grossAmount = qty * price * job;
+                        }
+                      }
+                      else if (isInkjetDouble) {
+
+                        if (qty <= 10) {
+                          grossAmount = 25 + ((qty - 1) * 10);
+                          price = grossAmount;
+                        }
+
+                        else {
+                          grossAmount = qty * price * job;
+                        }
+                      }
+                    }
+
+                    else {
+                      grossAmount = qty * price * job;
+                    }
+                  }
+                  
+                  
+                else {
+                    grossAmount = qty * price * job;
+                }
+              }
+              
+              else {
+                grossAmount = qty * price * job;
+              }
+              
+
+let previousDue =
+    parseFloat(window.previousDue || 0);
+
+let oldDuePayment =
+    parseFloat(
+        document.getElementById("oldDuePayment").value || 0
+    );
+
+let remainingOldDue =
+    Math.max(previousDue - oldDuePayment, 0);
+
+let discount = previewDiscount;
+
+let total = previewTotal || grossAmount;
+
+/* BLOCK ONLY IF OLD DUE STILL EXISTS */
+if (remainingOldDue > 0) {
+
+    discount = 0;
+
+    total = grossAmount + extraCharge;
+}
+
+
+      let itemName = `${categoryName} - ${sizeName} - ${variantName}`;
+
+      items.push({
+        billingType: "normal print",
+        name: itemName,
+        categoryId,
+        sizeId,
+        variantId,
+        qty,
+        job,
+        price,
+        gross: grossAmount,
+        discount,
+        extraCharge,
+        extraPurpose,
+        total
+      });
+
+      renderItems();
+      calculateTotal();
+
+      // Clear inputs
+      document.getElementById("itemQty").value = "";
+      document.getElementById("itemDiscountValue").value = "";
+      document.getElementById("itemPrice").value = "";
+      document.getElementById("itemTotalPreview").value = "";
+      document.getElementById("itemExtraCharge").value = "";
+      document.getElementById("itemJob").value = 1;
+    });
+}
+
+
+
+/* RENDER TABLE */
+function renderItems() {
+  let tbody = document.getElementById("billItems");
+  tbody.innerHTML = "";
+
+  items.forEach((item, index) => {
+    let totalPrice = parseFloat(item.gross || 0);
+
+    let percent = totalPrice? (item.discount / totalPrice) * 100 : 0;
+
+    tbody.innerHTML += `
+      <tr>
+        <td>
+          ${item.name}
+          ${
+            item.extraPurpose
+              ? `<br><small>Extra: ${item.extraPurpose}</small>`
+              : ""
+          }
+        </td>
+        <td>${item.qty}</td>
+        <td>${item.job || 1}</td>
+        <td>₹${item.price.toFixed(2)}</td>
+        <td>₹${item.discount.toFixed(2)}</td>
+        <td>₹${item.extraCharge.toFixed(2)}</td>
+        <td>₹${item.total.toFixed(2)}</td>
+        <td>
+          <div class="action-btns">
+            <div class="tooltip">
+              <button type="button" class="a-edit" onclick="editItem(${index})">✏️</button>
+              <span class="tooltip-text">Edit</span>
+            </div>
+            <div class="tooltip">
+              <button type="button" class="a-close" onclick="removeItem(${index})">X</button>
+              <span class="tooltip-text">Remove</span>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function editItem(index) {
+  let item = items[index];
+
+  /* =========================
+   MANUAL ITEM EDIT
+========================= */
+
+if (item.billingType === "manual") {
+
+    document.getElementById("itemCategory").value = "manual";
+
+    document.getElementById("manualItemName").style.display = "block";
+
+    document.getElementById("itemSize").style.display = "none";
+
+    document.getElementById("itemVariant").style.display = "none";
+
+    document.getElementById("manualItemName").value =
+        item.name || "";
+
+    document.getElementById("itemQty").value =
+        item.qty || "";
+
+    document.getElementById("itemJob").value =
+        item.job || 1;
+
+    document.getElementById("itemPrice").value =
+        parseFloat(item.price || 0).toFixed(2);
+
+    document.getElementById("itemDiscountValue").value =
+        parseFloat(item.discount || 0).toFixed(2);
+
+    document.getElementById("itemExtraCharge").value =
+        parseFloat(item.extraCharge || 0).toFixed(2);
+
+    document.getElementById("extraPurpose").value =
+        item.extraPurpose || "";
+
+    document.getElementById("itemTotalPreview").value =
+        parseFloat(item.total || 0).toFixed(2);
+
+    items.splice(index, 1);
+
+    renderItems();
+
+    calculateTotal();
+
+    return;
+}
+
+  /* =========================================
+   DIGITAL ITEM EDIT
+========================================= */
+
+if (item.billingType === "digital print") {
+
+    console.log(item);
+
+    document.getElementById("billingMode").value = "digital";
+
+    document.getElementById("billingMode").dispatchEvent(
+    new Event("change")
+);
+
+    document.getElementById("normalBillingFields").style.display = "none";
+
+    document.getElementById("digitalBillingFields").style.display = "grid";
+
+    document.getElementById("itemJob").value =
+    item.job || 1;
+
+    // CATEGORY
+    document.getElementById("digitalCategory").value =
+        item.categoryId;
+
+    // LOAD GSM
+    fetch(`/get-digital-gsm/?category_id=${item.categoryId}`)
+
+    .then(res => res.json())
+
+    .then(data => {
+         console.log("Laminations:", data);
+
+        let gsmDropdown =
+            document.getElementById("digitalGsm");
+
+        gsmDropdown.innerHTML =
+            '<option value="">Select GSM</option>';
+
+        data.gsms.forEach(gsm => {
+
+            gsmDropdown.innerHTML += `
+                <option value="${gsm.id}">
+                    ${gsm.name}
+                </option>
+            `;
+        });
+
+        gsmDropdown.value = item.sizeId;
+
+        // AUTO SIDE DETECT
+        document.getElementById("digitalSide").value =
+    item.side || "";
+
+        return fetch(
+            `/get-digital-products/?gsm_id=${item.sizeId}`
+        );
+    })
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        let productDropdown =
+            document.getElementById("digitalProduct");
+
+        productDropdown.innerHTML =
+            '<option value="">Select Product</option>';
+
+        data.products.forEach(product => {
+
+            productDropdown.innerHTML += `
+                <option 
+                    value="${product.id}"
+                    data-lamination="${product.lamination || ''}">
+                    ${product.name}
+                </option>
+            `;
+        });
+
+        productDropdown.value = item.variantId;
+
+        return fetch(
+    `/get-digital-laminations/?product_id=${item.variantId}`
+)
+.then(res => res.json())
+.then(data => {
+
+    let laminationDropdown =
+        document.getElementById("digitalLamination");
+
+    laminationDropdown.innerHTML =
+        '<option value="">Select Lamination</option>';
+
+    data.laminations.forEach(lam => {
+
+        laminationDropdown.innerHTML += `
+            <option value="${lam.id}">
+                ${lam.name}
+            </option>`;
+    });
+
+    laminationDropdown.value = item.laminationId;
+
+    console.log("Selected Lamination:", item.laminationId);
+console.log("Dropdown Value:", laminationDropdown.value);
+
+    document.getElementById("digitalDeliveryType").value =
+        item.deliveryTypeId;
+
+    console.log("Delivery:", item.deliveryTypeId);
+console.log(
+    "Delivery Dropdown:",
+    document.getElementById("digitalDeliveryType").value
+);
+
+    // DELIVERY TYPE
+        document.getElementById("digitalDeliveryType").value =
+    item.deliveryTypeId;
+
+        // PREFILL
+        document.getElementById("digitalQty").value =
+            item.qty;
+
+        document.getElementById("itemPrice").value =
+            parseFloat(item.price || 0).toFixed(2);
+
+        document.getElementById("itemDiscountValue").value =
+            parseFloat(item.discount || 0).toFixed(2);
+
+        document.getElementById("itemExtraCharge").value =
+            parseFloat(item.extraCharge || 0).toFixed(2);
+
+        document.getElementById("extraPurpose").value =
+            item.extraPurpose || "";
+
+        document.getElementById("itemTotalPreview").value =
+            parseFloat(item.total || 0).toFixed(2);
+
+    updatePrice();
+});
+
+        
+    });
+
+    // REMOVE TEMP
+    items.splice(index, 1);
+
+    renderItems();
+
+    calculateTotal();
+
+    return;
+}
+
+  // SAFETY CHECK FOR OLD ITEMS WITHOUT CATEGORY/SIZE
+  if (!item.categoryId || !item.sizeId) {
+    showToast("Old bill item has missing category/size mapping. Please select manually.");
+
+    document.getElementById("itemQty").value = item.qty || "";
+    document.getElementById("itemPrice").value = item.price || "";
+    document.getElementById("itemDiscountValue").value = item.discount || "";
+    document.getElementById("itemExtraCharge").value = item.extraCharge || "";
+    document.getElementById("extraPurpose").value = item.extraPurpose || "";
+    document.getElementById("itemTotalPreview").value = item.total || "";
+
+    // Remove from table for editing
+    items.splice(index, 1);
+    renderItems();
+    calculateTotal();
+    return;
+  }
+
+  // CATEGORY
+  let categoryDropdown = document.getElementById("itemCategory");
+  categoryDropdown.value = item.categoryId;
+
+  // LOAD SIZES
+  fetch(`/get-sizes/?category_id=${item.categoryId}`)
+    .then(res => res.json())
+    .then(sizeData => {
+
+      let sizeDropdown = document.getElementById("itemSize");
+      sizeDropdown.innerHTML = '<option value="">Select Size</option>';
+
+      sizeData.sizes.forEach(size => {
+        sizeDropdown.innerHTML += `
+          <option value="${size.id}">
+            ${size.name}
+          </option>
+        `;
+      });
+
+      sizeDropdown.value = item.sizeId;
+
+      // LOAD VARIANTS ONLY IF SIZE EXISTS
+      if (!item.sizeId) {
+        return Promise.resolve({ variants: [] });
+      }
+
+      return fetch(`/get-variants/?size_id=${item.sizeId}`)
+        .then(res => res.json());
+    })
+
+    .then(variantData => {
+
+      let variantDropdown = document.getElementById("itemVariant");
+      variantDropdown.innerHTML = '<option value="">Select Variant</option>';
+
+      if (variantData.variants) {
+        variantData.variants.forEach(variant => {
+          variantDropdown.innerHTML += `
+            <option value="${variant.id}">
+              ${variant.name}
+            </option>
+          `;
+        });
+      }
+
+      variantDropdown.value = item.variantId || "";
+
+      // PREFILL
+      document.getElementById("itemQty").value = item.qty || "";
+      document.getElementById("itemJob").value = item.job || 1;
+      document.getElementById("itemPrice").value = parseFloat(item.price || 0).toFixed(2);
+      document.getElementById("itemDiscountValue").value = parseFloat(item.discount || 0).toFixed(2);
+      document.getElementById("itemExtraCharge").value = parseFloat(item.extraCharge || 0).toFixed(2);
+      document.getElementById("extraPurpose").value = item.extraPurpose || "";
+      document.getElementById("itemTotalPreview").value = parseFloat(item.total || 0).toFixed(2);
+
+      // DISCOUNT %
+      let gross = parseFloat(item.gross || 0);
+      let percent = gross ? ((parseFloat(item.discount || 0) / gross) * 100) : 0;
+
+      document.getElementById("itemDiscount").value = percent.toFixed(2);
+
+      updatePrice();
+    })
+
+    .catch(error => {
+      console.error("Edit Item Error:", error);
+      showToast("Error loading item details.");
+    });
+
+  // REMOVE ITEM FROM TABLE TEMPORARILY
+  items.splice(index, 1);
+
+  renderItems();
+  calculateTotal();
+}
+
+
+
+/* REMOVE */
+function removeItem(index) {
+  items.splice(index, 1);
+  renderItems();
+  calculateTotal();
+}
+
+
+function customRoundAmount(amount) {
+  let whole = Math.floor(amount);
+
+  let decimal = amount - whole;
+
+  if (decimal < 0.5) {
+    return whole;
+  }
+
+  return whole + 1;
+}
+
+/* TOTAL CALC */
+function calculateTotal() {
+
+  let gross = items.reduce((sum, item) => {
+
+    let itemGross =
+        (parseFloat(item.gross) || 0) +
+        (parseFloat(item.extraCharge) || 0);
+
+    return sum + itemGross;
+
+}, 0);
+
+  let itemDiscount = items.reduce((sum, item) => {
+  return sum + (parseFloat(item.discount) || 0);
+}, 0);
+
+let extraDiscount = parseFloat(document.getElementById("extraDiscount").value) || 0;
+
+let totalDiscount = itemDiscount + extraDiscount;
+
+  let extra = parseFloat(document.getElementById("extraDiscount").value) || 0;
+
+  let pointsField = document.getElementById("points");
+  let points = pointsField ? (parseFloat(pointsField.value) || 0) : 0;
+
+  if (points > gross - totalDiscount) {
+    points = Math.max(gross - totalDiscount, 0);
+
+    if (pointsField) {
+      pointsField.value = points;
+    }
+  }
+
+  let netTotal = Math.max(gross - totalDiscount, 0);
+
+  let rawFinal = Math.max(gross - totalDiscount - points, 0);
+
+  let final = customRoundAmount(rawFinal);
+
+  document.getElementById("grossAmount").innerText = "₹" + gross.toFixed(2);
+document.getElementById("discountAmount").innerText = "- ₹" + totalDiscount.toFixed(2);
+document.getElementById("netAmount").innerText = "₹" + netTotal.toFixed(2);
+
+  document.getElementById("finalAmount").innerText = "₹" + final.toFixed(2);
+
+  let paidField = document.getElementById("paidAmount");
+
+  paidField.addEventListener("input", function () {
+  this.dataset.manual = "true";
+});
+
+
+
+  let paidInput = paidField.value.trim();
+
+  let paid = 0;
+
+  if (paidInput !== "") {
+    paid = parseFloat(paidInput);
+
+    if (isNaN(paid) || paid < 0) {
+      paid = 0;
+    }
+  }
+
+
+  let maxCurrentBillPay = final;
+  
+  if (paid > maxCurrentBillPay) {
+    paid = maxCurrentBillPay;
+    document.getElementById("paidAmount").value = maxCurrentBillPay.toFixed(2);
+  }
+
+
+  let previousDue = window.previousDue || 0;
+
+let oldDuePayment = parseFloat(
+  document.getElementById("oldDuePayment")?.value || 0
+);
+
+if (isNaN(oldDuePayment) || oldDuePayment < 0) {
+  oldDuePayment = 0;
+}
+
+if (oldDuePayment > previousDue) {
+  oldDuePayment = previousDue;
+  document.getElementById("oldDuePayment").value =
+    previousDue.toFixed(2);
+}
+
+let remainingOldDue = previousDue - oldDuePayment;
+
+/* REMOVE DISCOUNT ONLY IF DUE STILL EXISTS */
+if (remainingOldDue > 0) {
+
+    itemDiscount = 0;
+
+    totalDiscount = extraDiscount;
+
+    items.forEach(item => {
+
+        item.discount = 0;
+
+        item.total =
+            (parseFloat(item.gross || 0)) +
+            (parseFloat(item.extraCharge || 0));
+    });
+
+}
+
+document.getElementById("remainingOldDue").innerText =
+  "₹" + remainingOldDue.toFixed(2);
+
+let orderAdvance = parseFloat(
+  document.getElementById("orderAdvance")?.value || 0
+);
+
+if (orderAdvance > 0) {
+  document.querySelector(".bill h4").innerText =
+  `Payment (Advance Paid ₹${orderAdvance.toFixed(2)})`;
+}
+// Remaining amount after advance
+let remainingBillAmount = Math.max(final - orderAdvance, 0);
+
+if (
+    !paidField.dataset.manual &&
+    final > 0
+) {
+
+    paidField.value =
+      remainingBillAmount.toFixed(2);
+}
+
+// AUTO FILL ONLY FIRST TIME
+/*if (!paidField.dataset.manual) {
+    paidField.value = remainingBillAmount.toFixed(2);
+}*/
+
+// Re-read paid after auto fill
+paid = parseFloat(paidField.value || 0);
+
+// Due Calculation
+let currentBillDue = Math.max(remainingBillAmount - paid, 0);
+
+let due = currentBillDue;
+
+due += remainingOldDue;
+
+  {% comment %} let status = "PAID";
+
+  if (due > 0 && paid > 0) {
+    status = "PARTIAL";
+  }
+  else if (paid == 0 && final > 0) {
+    status = "DUE"
+  } {% endcomment %}
+
+  let status = "PAID";
+
+let totalCurrentPaid = paid;
+
+if (paid >= final) {
+  status = "PAID";
+}
+else if (paid > 0) {
+  status = "PARTIAL";
+}
+else {
+  status = "DUE";
+}
+
+  // document.getElementById("grossAmount").innerText = "₹" + gross.toFixed(2);
+  document.getElementById("finalAmount").innerText = "₹" + final.toFixed(2);
+  document.getElementById("dueAmount").innerText = "₹" + due.toFixed(2);
+
+  let statusEl = document.getElementById("paymentStatus");
+
+  statusEl.innerText = status;
+
+if (status === "PAID") {
+  statusEl.style.color = "green";
+}
+else if (status === "PARTIAL") {
+  statusEl.style.color = "orange";
+}
+else {
+  statusEl.style.color = "red";
+}
+}
+
+
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const categoryDropdown = document.getElementById("itemCategory");
+    const sizeDropdown = document.getElementById("itemSize");
+    const variantDropdown = document.getElementById("itemVariant");
+
+    categoryDropdown.addEventListener("change", function () {
+
+        let manualInput =
+    document.getElementById("manualItemName");
+
+if (this.value === "manual") {
+
+    manualInput.style.display = "block";
+
+    document.getElementById("itemSize").style.display = "none";
+
+    document.getElementById("itemVariant").style.display = "none";
+
+    document.getElementById("itemPrice").readOnly = false;
+
+    return;
+}
+else {
+
+    manualInput.style.display = "none";
+
+    document.getElementById("itemSize").style.display = "block";
+
+    document.getElementById("itemVariant").style.display = "block";
+
+    document.getElementById("itemPrice").readOnly = false;
+}
+
+        let categoryId = this.value;
+
+        sizeDropdown.innerHTML = '<option value="">Select Size</option>';
+        variantDropdown.innerHTML = '<option value="">Select Variant</option>';
+
+        if (!categoryId) return;
+
+        fetch(`/get-sizes/?category_id=${categoryId}`)
+        .then(res => res.json())
+        .then(data => {
+            data.sizes.forEach(size => {
+                sizeDropdown.innerHTML += `
+                    <option value="${size.id}">
+                        ${size.name}
+                    </option>
+                `;
+            });
+        });
+
+        let customerType = window.selectedCustomerType;
+
+        if (customerType) {
+            fetch(`/get-discount/?category_id=${categoryId}&customer_type=${customerType}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("itemDiscount").value = data.discount || 0;
+                updatePrice();
+            });
+        }
+    });
+
+    sizeDropdown.addEventListener("change", function () {
+        let sizeId = this.value;
+
+        variantDropdown.innerHTML = '<option value="">Select Variant</option>';
+
+        if (!sizeId) return;
+
+        fetch(`/get-variants/?size_id=${sizeId}`)
+        .then(res => res.json())
+        .then(data => {
+            data.variants.forEach(variant => {
+                variantDropdown.innerHTML += `
+                    <option value="${variant.id}">
+                        ${variant.name}
+                    </option>
+                `;
+            });
+        });
+
+        updatePrice();
+    });
+
+    variantDropdown.addEventListener("change", updatePrice);
+
+});
+</script>
+
+<script>
+window.addEventListener("pageshow", function(event) {
+    if (event.persisted) {
+        location.reload();
+    }
+});
+</script>
+
+<script>
+{% if bill %}
+document.addEventListener("DOMContentLoaded", function () {
+
+
+  // CUSTOMER PREFILL
+  selectCustomer({
+    id: "{{ bill.customer.id }}",
+    name: "{{ bill.customer.name|escapejs }}",
+    phone: "{{ bill.customer.phone|escapejs }}",
+    category: "{{ bill.customer.category|escapejs }}",
+    is_member: {{ bill.customer.is_member|yesno:"true,false" }},
+    member_id: "{{ bill.customer.member_id|default:''|escapejs }}",
+    points: {{ bill.customer.points|default:0 }},
+    due_amount: {{ edit_previous_due|default:0 }},
+    expiry_date: "{{ bill.customer.expiry_date|date:'Y-m-d' }}"
+  });
+
+  // PAYMENT PREFILL
+  document.getElementById("paidAmount").value = "{{ bill.paid_amount|default:0 }}";
+  document.getElementById("paidAmount").dataset.manual = "true";
+  document.getElementById("oldDuePayment").value = "{{ bill.old_due_paid|default:0 }}";
+  document.getElementById("extraDiscount").value = "{{ bill.extra_discount|default:0 }}";
+
+  // RESET ITEMS
+  items = [];
+
+  {% for i in items %}
+    items.push({
+    billingType: "{{ i.billing_type|default:'normal print' }}",
+
+    name: "{{ i.service_name|default:''|escapejs }}",
+
+    categoryId: "{{ i.category_id|default:'' }}",
+    sizeId: "{{ i.size_id|default:'' }}",
+    variantId: "{{ i.variant_id|default:'' }}",
+
+    laminationId: "{{ i.lamination_id|default:'' }}",
+    deliveryTypeId: "{{ i.delivery_type_id|default:'' }}",
+
+    laminationName: "{{ i.lamination_name|default:''|escapejs }}",
+    deliveryTypeName: "{{ i.delivery_type_name|default:''|escapejs }}",
+
+    side: "{{ i.side|default:''|escapejs }}",
+    sideName: "{{ i.side_name|default:''|escapejs }}",
+
+    qty: parseFloat("{{ i.qty|default:0 }}"),
+    job: parseFloat("{{ i.job|default:1 }}"),
+    price: parseFloat("{{ i.price|default:0 }}"),
+    discount: parseFloat("{{ i.discount|default:0 }}"),
+    gross: parseFloat("{{ i.total|default:0 }}")
+          + parseFloat("{{ i.discount|default:0 }}")
+          - parseFloat("{{ i.extra_charge|default:0 }}"),
+    extraCharge: parseFloat("{{ i.extra_charge|default:0 }}"),
+    extraPurpose: "{{ i.extra_purpose|default:''|escapejs }}",
+    total: parseFloat("{{ i.total|default:0 }}")
+});
+  {% endfor %}
+
+  console.log("Loaded Bill Items:", items);
+
+  // FORCE SHOW TABLE
+  renderItems();
+  calculateTotal();
+});
+{% endif %}
+</script>
+
+<script>
+/* =========================================================
+FULL WORKING PRINT OUT + NORMAL PRICE SETUP
+PASTE INSIDE YOUR updatePrice() FUNCTION
+(Replace old function fully)
+========================================================= */
+
+function updatePrice() {
+
+    let billingMode = document.getElementById("billingMode").value;
+
+    /* Digital Billing */
+
+    if (billingMode === "digital") {
+
+      let categoryId = document.getElementById("digitalCategory").value;
+      let gsmId = document.getElementById("digitalGsm").value;
+      let productId = document.getElementById("digitalProduct").value;
+      let deliveryType = document.getElementById("digitalDeliveryType").value;
+      let qty = parseFloat(document.getElementById("digitalQty").value || 0);
+
+      if (!categoryId || !gsmId || !productId || qty <= 0) {
+        document.getElementById("itemPrice").value = "";
+        document.getElementById("itemDiscountValue").value = "";
+        document.getElementById("itemTotalPreview").value = "";
+
+        return;
+      }
+      let laminationId =
+    document.getElementById("digitalLamination").value;
+
+let side =
+    document.getElementById("digitalSide").value;
+
+if (
+    !laminationId ||
+    !deliveryType ||
+    !side ||
+    qty <= 0
+){
+    return;
+}
+
+fetch(
+`/get-digital-price/?lamination_id=${laminationId}&side=${side}&delivery_type=${deliveryType}&qty=${qty}`
+)
+.then(res => res.json())
+.then(data => {
+
+let customerType =
+    (window.selectedCustomerType || "").toLowerCase();
+
+let basePrice = 0;
+let discountPercent = 0;
+
+/* Shop */
+
+if (customerType === "shop") {
+
+    basePrice =
+        parseFloat(data.shop_rate || 0);
+
+}
+
+/* Member */
+
+else if (customerType === "member") {
+
+    basePrice =
+        parseFloat(data.customer_rate || 0);
+
+    discountPercent =
+        parseFloat(data.customer_discount || 0);
+
+}
+
+/* Customer */
+
+else {
+
+    basePrice =
+        parseFloat(data.customer_rate || 0);
+    
+    if (customerType === "member") {
+
+                discountPercent =
+                    parseFloat(data.customer_discount || 0);
+            }
+
+}
+
+        /* =================================
+           DIGITAL = SLAB PRICE
+           NO qty * price
+        ================================= */
+
+        let job =
+            parseFloat(
+                document.getElementById("digitalJob").value || 1
+            );
+
+        let gross = basePrice * job;
+
+        let discount =
+            gross * (discountPercent / 100);
+
+        let extraCharge =
+            parseFloat(
+                document.getElementById("itemExtraCharge").value || 0
+            );
+
+        let finalTotal =
+            gross - discount + extraCharge;
+
+        let priceInput =
+    document.getElementById("itemPrice");
+
+/* DON'T OVERWRITE MANUAL PRICE */
+if (
+    !priceInput.dataset.manual ||
+    priceInput.dataset.manual !== "true"
+) {
+    priceInput.value = basePrice.toFixed(2);
+}
+
+        document.getElementById("itemDiscountValue").value =
+            discount.toFixed(2);
+
+        document.getElementById("itemTotalPreview").value =
+            finalTotal.toFixed(2);
+
+        
+    });
+
+    return;
+}
+    let categoryDropdown = document.getElementById("itemCategory");
+    let sizeDropdown = document.getElementById("itemSize");
+    let variantDropdown = document.getElementById("itemVariant");
+
+    let categoryId = categoryDropdown.value;
+    let sizeId = sizeDropdown.value;
+    let variantId = variantDropdown.value;
+
+    let qty = parseFloat(document.getElementById("itemQty").value) || 0;
+    let job = parseFloat(document.getElementById("itemJob").value) || 1;
+
+    let categoryText = categoryDropdown.selectedOptions[0]?.textContent.trim().toLowerCase() || "";
+    let sizeText = sizeDropdown.selectedOptions[0]?.textContent.trim().toLowerCase() || "";
+    let variantText = variantDropdown.selectedOptions[0]?.textContent.trim().toLowerCase() || "";
+
+    /* MANUAL ENTRY */
+if (categoryId === "manual") {
+
+    let price =
+        parseFloat(document.getElementById("itemPrice").value || 0);
+
+    let gross = qty * price * job;
+
+    let discount =
+        parseFloat(document.getElementById("itemDiscountValue").value || 0);
+
+    let extraCharge =
+        parseFloat(document.getElementById("itemExtraCharge").value || 0);
+
+    let total =
+        gross - discount + extraCharge;
+
+    document.getElementById("itemTotalPreview").value =
+        total.toFixed(2);
+
+    return;
+}
+
+    /* ==========================================
+       RESET IF EMPTY
+    ========================================== */
+    if (!categoryId || !sizeId || !variantId || qty <= 0) {
+        document.getElementById("itemPrice").value = "";
+        document.getElementById("itemDiscount").value = "";
+        document.getElementById("itemDiscountValue").value = "";
+        document.getElementById("itemTotalPreview").value = "";
+        return;
+    }
+
+    /* ==========================================
+       GET CUSTOMER TYPE ONLY IF CUSTOMER SELECTED
+    ========================================== */
+    let customerType = (window.selectedCustomerType || "").toLowerCase();
+    let isMember = window.isMember || false;
+    
+
+    /* ==========================================
+       NORMAL AUTO PRICE PICKUP FROM DB
+    ========================================== */
+    fetch(`/get-price/?category_id=${categoryId}&size_id=${sizeId}&variant_id=${variantId}&qty=${qty}`)
+        .then(res => res.json())
+        .then(data => {
+
+            let price = parseFloat(data.price || 0);
+
+/*
+ALLOW PRINT OUT SPECIAL FORMULA
+EVEN IF DB PRICE NOT FOUND
+*/
+
+if (
+    price <= 0 &&
+    !categoryText.includes("print out") &&
+    !categoryText.includes("bill book") &&
+    !categoryText.includes("notice")
+) {
+    document.getElementById("itemPrice").value = "";
+    document.getElementById("itemDiscount").value = "";
+    document.getElementById("itemDiscountValue").value = "";
+    document.getElementById("itemTotalPreview").value = "";
+    return;
+}
+
+            
+            
+  let isBlackSingle = variantText.includes("black s");
+
+  let isBlackDouble = variantText.includes("black d");
+
+  let isInkjetSingle = variantText.includes("color inkjet s");
+
+  let isInkjetDouble = variantText.includes("color inkjet d");
+
+  let gross = 0;
+
+/* FIXED PRICE ITEMS */
+if (
+    categoryText.includes("banner") ||
+    categoryText.includes("poster") ||
+    categoryText.includes("letter pad") ||
+    categoryText.includes("printing") ||
+    categoryText.includes("invitation")
+
+) {
+    gross = price * job;
+}
+
+/* NOTICE - fully custom JS pricing (flat paper rate + range-based print slab + design) */
+else if (categoryText.includes("notice")) {
+    gross = calculateNoticePrice(qty, job, sizeText, variantText);
+    price = gross;
+}
+
+/* BILL BOOK - fully custom JS pricing (paper + print + design + binding) */
+else if (categoryText.includes("bill book")) {
+    gross = calculateBillBookPrice(qty, job, variantText, sizeText);
+    price = gross;
+}
+
+/* TRAIN TICKET */
+else if (categoryText.includes("train ticket")) {
+
+    if (sizeText.includes("minimum")) {
+        gross = 50 + ((qty - 1) * 20);
+        price = gross;
+    }
+    else if (sizeText.includes("thakkal")) {
+        gross = 75 + ((qty - 1) * 20);
+        price = gross;
+    }
+    else if (sizeText.includes("premium")) {
+        gross = 100 + ((qty - 1) * 20);
+        price = gross;
+    }
+}
+
+/* ONLINE APPLICATION */
+else if (categoryText.includes("online application")) {
+
+    if (
+        sizeText.includes("patta") ||
+        sizeText.includes("chitta") ||
+        sizeText.includes("ec")
+    ) {
+
+        if (qty <= 3) {
+            gross = 20;
+        }
+        else {
+            gross = 20 + ((qty - 3) * 5);
+        }
+    }
+    else {
+        gross = qty * price * job;
+    }
+}
+
+/* PRINT OUT */
+else if (categoryText.includes("print out")) {
+
+    let isBlackSingle = variantText.includes("black s");
+    let isBlackDouble = variantText.includes("black d");
+
+    let isInkjetSingle =
+        variantText.includes("color inkjet s");
+
+    let isInkjetDouble =
+        variantText.includes("color inkjet d");
+
+        if (sizeText.includes("sticker")) {
+
+        gross = qty * price * job;
+
+    }
+
+    /* BLACK */
+    else if (isBlackSingle || isBlackDouble) {
+
+        if (
+            sizeText.includes("a4") ||
+            sizeText.includes("legal")
+        ) {
+
+            if (isBlackSingle) {
+                if (qty <= 10) {
+                    gross = 10 + ((qty - 1) * 3);
+                    price = gross;
+                }
+                else if (qty <= 20) {
+                    gross = 37 + ((qty - 10) * 3);
+                    price = gross;
+                }
+                else {
+                    gross = qty * price * job;
+                }
+            }
+
+            else if (isBlackDouble) {
+                if (qty <= 10) {
+                    gross = 10 + ((qty - 1) * 4);
+                    price = gross;
+                }
+                else if (qty <= 20) {
+                    gross = 46 + ((qty - 10) * 4);
+                    price = gross;
+                }
+                else {
+                    gross = qty * price * job;
+                }
+            }
+        }
+
+        else if (sizeText.includes("a3")) {
+
+            if (isBlackSingle) {
+
+                if (qty <= 9) {
+                    gross = 15 + ((qty - 1) * 7);
+                    price = gross;
+                }
+                else {
+                    gross = qty * price * job;
+                }
+            }
+
+            else if (isBlackDouble) {
+
+                if (qty <= 9) {
+                    gross = 20 + ((qty - 1) * 7);
+                    price = gross;
+                }
+                else {
+                    gross = qty * price * job;
+                }
+            }
+        }
+        else {
+            gross = qty * price * job;
+        }
+    }
+
+    /* INKJET */
+    else if (
+        isInkjetSingle ||
+        isInkjetDouble
+    ) {
+
+        if (
+            sizeText.includes("a4") ||
+            sizeText.includes("legal")
+        ) {
+
+            if (isInkjetSingle) {
+
+                if (qty <= 10) {
+                    gross = 15 + ((qty - 1) * 10);
+                    price = gross;
+                }
+                else {
+                    gross = qty * price * job;
+                }
+            }
+
+            else if (isInkjetDouble) {
+
+                if (qty <= 10) {
+                    gross = 25 + ((qty - 1) * 10);
+                    price = gross;
+                }
+                else {
+                    gross = qty * price * job;
+                }
+            }
+        }
+        /* OTHER PRINT OUT TYPES */
+        else {
+            gross = qty * price * job;
+        }
+    }
+
+    else {
+        gross = qty * price * job;
+    }
+
+    
+}
+/* DEFAULT FOR ALL OTHER CATEGORIES */
+    else {
+        gross = qty * price * job;
+    }
+
+
+
+
+
+    let shopDiscount = 0;
+let memberDiscount = 0;
+
+/* PRINT OUT SPECIAL DISCOUNT */
+if (categoryText.includes("print out")) {
+
+    if (qty <= 1) {
+
+        shopDiscount = 40;
+        memberDiscount = 25;
+
+    } else {
+
+        shopDiscount = 25;
+        memberDiscount = 10;
+    }
+
+}
+
+/* NORMAL DB DISCOUNT */
+else {
+
+    shopDiscount =
+        parseFloat(data.shop_discount || 0);
+
+    memberDiscount =
+        parseFloat(data.cs_discount || 0);
+}
+
+            let discountPercent = 0;
+
+            if (customerType.toLowerCase() === "shop") {
+
+    discountPercent = shopDiscount;
+
+}
+else if (
+    customerType.toLowerCase() === "member"
+) {
+
+    discountPercent = memberDiscount;
+
+}
+
+            
+            let previousDue =
+    parseFloat(window.previousDue || 0);
+
+let oldDuePayment =
+    parseFloat(
+        document.getElementById("oldDuePayment")?.value || 0
+    );
+
+let remainingOldDue =
+    Math.max(previousDue - oldDuePayment, 0);
+
+let discount = 0;
+
+/* ALLOW DISCOUNT ONLY IF NO REMAINING DUE */
+if (remainingOldDue <= 0) {
+
+    discount =
+        gross * (discountPercent / 100);
+}
+
+            let extraCharge =
+                parseFloat(document.getElementById("itemExtraCharge").value) || 0;
+
+            let finalTotal = gross - discount + extraCharge;
+
+            document.getElementById("itemPrice").value =
+                price.toFixed(2);
+
+            document.getElementById("itemDiscount").value =
+                discountPercent.toFixed(2);
+
+            document.getElementById("itemDiscountValue").value =
+                discount.toFixed(2);
+
+            document.getElementById("itemTotalPreview").value =
+                finalTotal.toFixed(2);
+        })
+
+        .catch(error => {
+            console.error("Price Fetch Error:", error);
+        });
+}
+
+document.getElementById("itemQty").addEventListener("input", updatePrice);
+document.getElementById("itemJob").addEventListener("input", updatePrice);
+document.getElementById("itemVariant").addEventListener("change", updatePrice);
+document.getElementById("itemSize").addEventListener("change", updatePrice);
+document.getElementById("itemCategory").addEventListener("change", updatePrice);
+document.getElementById("itemExtraCharge").addEventListener("input", updatePrice);
+document.getElementById("itemPrice").addEventListener("input", updatePrice);
+document.getElementById("itemDiscountValue").addEventListener("input", updatePrice);
+
+document.querySelectorAll('input[type="number"]').forEach(input => {
+      input.addEventListener('wheel', function(e) {
+          e.preventDefault();
+          this.blur();
+      });
+  });
+</script>
+
+<script>
+window.addEventListener("DOMContentLoaded", function () {
+
+    let customerName = document.getElementById("selectedCustomerName")?.value;
+    let customerPhone = document.getElementById("selectedCustomerPhone")?.value;
+    let customerId = document.getElementById("selectedCustomerId")?.value;
+
+    if(customerName){
+
+        let customerObj = {
+            id: customerId,
+            name: customerName,
+            phone: customerPhone,
+
+            category: document.getElementById("selectedCustomerCategory")?.value,
+
+            due_amount: parseFloat(
+                document.getElementById("selectedCustomerDue")?.value || 0
+            ),
+
+            is_member:
+                document.getElementById("selectedCustomerIsMember")?.value === "true",
+
+            member_id:
+                document.getElementById("selectedCustomerMemberId")?.value,
+
+            points: parseFloat(
+                document.getElementById("selectedCustomerPoints")?.value || 0
+            ),
+
+            expiry_date:
+                document.getElementById("selectedCustomerExpiry")?.value
+        };
+
+        selectCustomer(customerObj);
+    }
+
+});
+</script>
+
+<script>
+window.addEventListener("DOMContentLoaded", function () {
+
+    {% if prepared_items %}
+
+    items = [];
+
+    {% for item in prepared_items %}
+
+    items.push({
+
+        billingType: "{{ item.billing_type|default:'normal print' }}",
+
+        name: [
+            "{{ item.category|escapejs }}",
+            "{{ item.size|escapejs }}",
+            "{{ item.side_name|default:''|escapejs }}",
+            "{{ item.variant|escapejs }}"
+        ].filter(Boolean).join(" - "),
+
+        categoryId: "{{ item.category_id }}",
+        sizeId: "{{ item.size_id }}",
+        variantId: "{{ item.variant_id }}",
+
+        laminationId: "{{ item.lamination_id }}",
+    deliveryTypeId: "{{ item.delivery_type_id }}",
+
+    laminationName: "{{ item.lamination_name|escapejs }}",
+    deliveryTypeName: "{{ item.delivery_type_name|escapejs }}",
+
+        side: "{{ item.side|default:''|escapejs }}",
+        sideName: "{{ item.side_name|default:''|escapejs }}",
+
+        qty: parseFloat("{{ item.qty }}"),
+
+        price: parseFloat("{{ item.price }}"),
+
+        gross:
+          parseFloat("{{ item.total }}") +
+          parseFloat("{{ item.discount }}"),
+
+        discount: (() => {
+
+    if (parseFloat(window.selectedCustomer?.due_amount || 0) > 0) {
+        return 0;
+    }
+
+    let savedDiscount =
+        parseFloat("{{ item.discount }}") || 0;
+
+    /*
+    PRINT OUT SPECIAL FIX
+    */
+    if (
+        "{{ item.category|lower }}".includes("print out") &&
+        savedDiscount === 0
+    ) {
+
+        let gross =
+            parseFloat("{{ item.total }}") +
+            parseFloat("{{ item.discount }}");
+
+        let customerType =
+            (window.selectedCustomerType || "").toLowerCase();
+
+        let percent = 0;
+
+        if (customerType === "shop") {
+            percent = 40;
+        }
+        else if (customerType === "member") {
+            percent = 25;
+        }
+
+        return gross * (percent / 100);
+    }
+
+    return savedDiscount;
+})(),
+
+        extraCharge: parseFloat("{{ item.extra_charge }}"),
+
+        extraPurpose: "",
+
+        total: (() => {
+
+    let originalTotal =
+        parseFloat("{{ item.total }}") || 0;
+
+    let originalDiscount =
+        parseFloat("{{ item.discount }}") || 0;
+
+    /*
+    Due customer -> no discount
+    */
+    if (parseFloat(window.selectedCustomer?.due_amount || 0) > 0) {
+        return originalTotal + originalDiscount;
+    }
+
+    /*
+    PRINT OUT BELOW 20 FIX
+    */
+    if (
+        "{{ item.category|lower }}".includes("print out") &&
+        originalDiscount === 0
+    ) {
+
+        let gross =
+            originalTotal + originalDiscount;
+
+        let customerType =
+            (window.selectedCustomerType || "").toLowerCase();
+
+        let percent = 0;
+
+        if (customerType === "shop") {
+            percent = 40;
+        }
+        else if (customerType === "member") {
+            percent = 25;
+        }
+
+        let discountAmount =
+            gross * (percent / 100);
+
+        return gross - discountAmount;
+    }
+
+    return originalTotal;
+
+})()
+    });
+
+    {% endfor %}
+
+        renderItems();
+
+        calculateTotal();
+
+    {% endif %}
+});
+</script>
+
+
+<script>
+
+const billingMode =
+    document.getElementById("billingMode");
+
+const normalFields =
+    document.getElementById("normalBillingFields");
+
+const digitalFields =
+    document.getElementById("digitalBillingFields");
+
+/* PAGE LOAD */
+window.addEventListener("DOMContentLoaded", () => {
+
+    if (billingMode.value === "digital") {
+
+        normalFields.style.display = "none";
+        digitalFields.style.display = "grid";
+
+    } else {
+
+        normalFields.style.display = "grid";
+        digitalFields.style.display = "none";
+    }
+});
+
+function clearBillingFields() {
+
+    /* ---------- Normal ---------- */
+
+    document.getElementById("itemCategory").value = "";
+    document.getElementById("itemSize").innerHTML =
+        '<option value="">Select Size</option>';
+
+    document.getElementById("itemVariant").innerHTML =
+        '<option value="">Select Variant</option>';
+
+    document.getElementById("itemQty").value = "";
+    document.getElementById("itemJob").value = 1;
+
+    document.getElementById("manualItemName").value = "";
+    document.getElementById("manualItemName").style.display = "none";
+
+    /* ---------- Digital ---------- */
+
+    document.getElementById("digitalCategory").value = "";
+
+    document.getElementById("digitalGsm").innerHTML =
+        '<option value="">Select GSM</option>';
+
+    document.getElementById("digitalProduct").innerHTML =
+        '<option value="">Select Product</option>';
+
+    document.getElementById("digitalLamination").innerHTML =
+        '<option value="">Select Lamination</option>';
+
+    document.getElementById("digitalSide").value = "";
+    document.getElementById("digitalDeliveryType").value = "";
+    document.getElementById("digitalQty").value = "";
+    document.getElementById("digitalJob").value = 1;
+
+    /* ---------- Common ---------- */
+
+    document.getElementById("itemPrice").value = "";
+    document.getElementById("itemDiscountValue").value = "";
+    document.getElementById("itemTotalPreview").value = "";
+    document.getElementById("itemExtraCharge").value = "";
+    document.getElementById("extraPurpose").value = "";
+
+    document.getElementById("itemDiscount").value = 0;
+}
+
+/* SWITCH */
+billingMode.addEventListener("change", function () {
+
+    clearBillingFields();
+
+    if (this.value === "digital") {
+
+        normalFields.style.display = "none";
+        digitalFields.style.display = "grid";
+
+    } else {
+
+        normalFields.style.display = "grid";
+        digitalFields.style.display = "none";
+    }
+});
+
+
+/* =========================================
+   DIGITAL CATEGORY -> GSM
+========================================= */
+
+document.getElementById("digitalCategory")
+.addEventListener("change", function () {
+
+    let categoryId = this.value;
+
+    let gsmDropdown =
+        document.getElementById("digitalGsm");
+
+    let productDropdown =
+        document.getElementById("digitalProduct");
+
+    gsmDropdown.innerHTML =
+        '<option value="">Select GSM</option>';
+
+    productDropdown.innerHTML =
+        '<option value="">Select Product</option>';
+
+    if (!categoryId) return;
+
+    fetch(`/get-digital-gsm/?category_id=${categoryId}`)
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        data.gsms.forEach(gsm => {
+
+            gsmDropdown.innerHTML += `
+                <option value="${gsm.id}">
+                    ${gsm.name}
+                </option>
+            `;
+        });
+    });
+});
+
+
+/* =========================================
+   GSM -> PRODUCT
+========================================= */
+
+
+
+    /* =========================================
+   LOAD DIGITAL PRODUCTS
+========================================= */
+
+function loadDigitalProducts() {
+
+    let gsmId =
+        document.getElementById("digitalGsm").value;
+
+    let productDropdown =
+        document.getElementById("digitalProduct");
+
+    /* RESET */
+    productDropdown.innerHTML =
+        '<option value="">Select Product</option>';
+
+    /* RESET LAMINATION */
+    document.getElementById("digitalLamination").innerHTML =
+        '<option value="">Select Lamination</option>';
+
+    if (!gsmId) return;
+
+    fetch(`/get-digital-products/?gsm_id=${gsmId}`)
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        /* IMPORTANT */
+        let addedProducts = [];
+
+        data.products.forEach(product => {
+
+            /* PREVENT DUPLICATE */
+            if (!addedProducts.includes(product.id)) {
+
+                addedProducts.push(product.id);
+
+                productDropdown.innerHTML += `
+                    <option value="${product.id}">
+                        ${product.name}
+                    </option>
+                `;
+            }
+        });
+    });
+}
+
+function loadDigitalLaminations() {
+
+    let productId =
+        document.getElementById("digitalProduct").value;
+
+    let laminationDropdown =
+        document.getElementById("digitalLamination");
+
+    laminationDropdown.innerHTML =
+        '<option value="">Select Lamination</option>';
+
+    if (!productId) return;
+
+    fetch(`/get-digital-laminations/?product_id=${productId}`)
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        data.laminations.forEach(lam => {
+
+            laminationDropdown.innerHTML += `
+                <option value="${lam.id}">
+                    ${lam.name}
+                </option>
+            `;
+        });
+    });
+}
+
+
+/* GSM CHANGE */
+document.getElementById("digitalGsm")
+.addEventListener("change", loadDigitalProducts);
+
+document.getElementById("digitalProduct")
+.addEventListener("change", loadDigitalLaminations);
+
+document.getElementById("digitalLamination")
+.addEventListener("change", updatePrice);
+
+document.getElementById("digitalSide")
+.addEventListener("change", updatePrice);
+
+
+/* SIDE CHANGE */
+
+
+
+/* =========================================
+   AUTO PRICE UPDATE
+========================================= */
+
+document.getElementById("digitalProduct")
+.addEventListener("change", updatePrice);
+
+document.getElementById("digitalDeliveryType")
+.addEventListener("change", updatePrice);
+
+document.getElementById("digitalGsm")
+.addEventListener("change", updatePrice);
+
+document.getElementById("digitalQty")
+.addEventListener("input", updatePrice);
+
+document.getElementById("digitalJob")
+.addEventListener("input", updatePrice);
+
+</script>
+
+
+{% endblock %}

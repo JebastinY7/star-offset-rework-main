@@ -1,0 +1,20 @@
+/* Customers list (loaded by Customers.jsx; icon buttons come from billhistory.css) */
+
+/* .dash caps pages at 1200px - the customers list should use the whole content area */
+.cust-page { max-width:none; }
+
+/* the compact-table rule `.dash-card td button` would pad the icon buttons - keep them square */
+.dash-card td .bh-ico { padding:0; font-size:inherit; line-height:1; }
+.cust-list .bh-actions { gap:6px; }
+.cust-list td { padding-top:10px; padding-bottom:10px; }
+
+/* The last icon's tooltip is centred on the icon and sticks out past the table edge, which made the
+   table scrollable (grey scrollbar). Anchor it to the icon's right edge so it stays inside. */
+.cust-list .bh-ico:last-child::after { left:auto; right:0; transform:translateY(3px); }
+.cust-list .bh-ico:last-child::before { left:auto; right:11px; transform:translateY(3px); }
+.cust-list .bh-ico:last-child:hover::after, .cust-list .bh-ico:last-child:focus-visible::after,
+.cust-list .bh-ico:last-child:hover::before, .cust-list .bh-ico:last-child:focus-visible::before { transform:translateY(0); }
+
+/* no visible scrollbar (the table still scrolls sideways by touch / trackpad on narrow screens) */
+.cust-list .table-wrap { scrollbar-width:none; -ms-overflow-style:none; }
+.cust-list .table-wrap::-webkit-scrollbar { display:none; }

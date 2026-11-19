@@ -1,0 +1,123 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&display=swap");
+
+/* Sign-in page: light gold page with a faint halftone dot pattern and one centred card.
+   One form for admin, manager and staff; the same card also holds the forgot-password steps. */
+.lg-shell {
+  --gold:#e3bf55; --gold-deep:#8a6a0f; --card:#fffdf7; --field:#fdf9ec; --ink:#17140f; --ink-soft:#5f584b; --line:#e3d6a8;
+  --serif:"Bricolage Grotesque", "DM Sans", system-ui, sans-serif;
+  min-height:100vh; min-height:100dvh; color:var(--ink);
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(255,255,255,.65), transparent 70%),
+    radial-gradient(circle, rgba(176,138,29,.18) 1px, transparent 1.6px) 0 0 / 22px 22px,
+    linear-gradient(160deg, #faefc9 0%, #f5e3a6 55%, #efd88d 100%);
+}
+
+/* ---- centred card ---- */
+.lg-main { min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 20px 16px; }
+.lg-card { position:relative; width:min(420px, 100%); padding:34px 36px 28px; background:var(--card);
+  border:1px solid var(--line); border-radius:16px; box-shadow:0 24px 60px -18px rgba(120,90,10,.35), 0 2px 0 rgba(255,255,255,.7) inset; }
+.lg-foot { margin:16px 0 0; font-size:13px; color:#7a6420; }
+
+.lg-brand-name { display:flex; align-items:center; gap:14px; margin-bottom:18px; }
+.lg-brand-name b { display:block; font-family:var(--serif); font-size:21px; font-weight:700; line-height:1.1; color:var(--ink); }
+.lg-brand-name small { display:block; font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:var(--gold-deep); margin-top:4px; }
+.lg-logo-tile { width:56px; height:56px; border-radius:14px; background:#fff; border:1px solid var(--line); display:grid; place-items:center; flex:none; box-shadow:0 6px 16px -8px rgba(120,90,10,.45); }
+.lg-logo-tile img { width:44px; height:44px; object-fit:contain; }
+
+.lg-ico { display:block; flex:none; }
+.lg-view { animation:lgIn .25s ease both; }
+@keyframes lgIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce) { .lg-view { animation:none; } .lg-spin { animation-duration:1.6s; } }
+
+.lg-head { margin-bottom:18px; }
+.lg-head h1 { margin:0; font-family:var(--serif); font-size:26px; line-height:1.15; font-weight:700; letter-spacing:-.015em; }
+.lg-head p { margin:8px 0 0; color:var(--ink-soft); font-size:14px; line-height:1.5; }
+.lg-step { display:block; margin-bottom:10px; font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--gold-deep); }
+
+/* fields */
+.lg-form { display:flex; flex-direction:column; gap:14px; }
+.lg-field label { display:block; margin-bottom:6px; font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); }
+.lg-input { position:relative; }
+.lg-input input { display:block; width:100%; height:46px; padding:0 14px; border:1.5px solid var(--line); border-radius:8px; background:var(--field);
+  color:var(--ink); font-size:16px; transition:border-color .12s, box-shadow .12s, background .12s; }
+.lg-input.has-icon input { padding-left:42px; }
+.lg-lead { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--gold-deep); display:grid; pointer-events:none; }
+.lg-input:has(.lg-eye) input { padding-right:50px; }
+.lg-input input::placeholder { color:#a8a089; }
+.lg-input input:hover { border-color:#cdbb80; }
+.lg-input input:focus { outline:0; border-color:var(--gold-deep); background:#fff; box-shadow:0 0 0 4px rgba(227,191,85,.4); }
+.lg-input input:-webkit-autofill, .lg-input input:-webkit-autofill:focus { -webkit-box-shadow:0 0 0 100px var(--field) inset; -webkit-text-fill-color:var(--ink); }
+.lg-eye { position:absolute; right:5px; top:50%; transform:translateY(-50%); width:38px; height:38px; padding:0; border:0; background:none; border-radius:6px; color:var(--ink-soft); display:grid; place-items:center; }
+.lg-eye:hover { background:#f3e8c1; color:var(--ink); }
+.lg-eye:focus-visible { outline:2px solid var(--ink); }
+.lg-under { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:6px; min-height:20px; }
+.lg-under .lg-link { margin-left:auto; }
+.lg-caps { font-size:13px; font-weight:600; color:#a4430b; }
+
+.lg-btn { height:48px; width:100%; border:0; border-radius:999px; background:var(--ink); color:#fffdf7; font-size:16px; font-weight:700; letter-spacing:.01em;
+  display:flex; align-items:center; justify-content:center; gap:10px; transition:background .15s, transform .08s, box-shadow .15s; box-shadow:0 8px 18px -10px rgba(23,20,15,.7); }
+.lg-btn .lg-ico { color:var(--gold); transition:transform .15s; }
+.lg-btn:hover:not(:disabled) { background:#2c261c; }
+.lg-btn:hover:not(:disabled) .lg-ico { transform:translateX(3px); }
+.lg-btn:active:not(:disabled) { transform:translateY(1px); }
+.lg-btn:focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
+.lg-btn:disabled { opacity:.5; box-shadow:none; }
+.lg-spin { width:18px; height:18px; border-radius:50%; border:2px solid rgba(255,253,247,.3); border-top-color:var(--gold); animation:lgSpin .7s linear infinite; }
+@keyframes lgSpin { to { transform:rotate(360deg); } }
+
+.lg-aside { margin-top:16px; padding-top:14px; border-top:1px solid var(--line); display:flex; justify-content:center; }
+.lg-view > .lg-btn { margin-top:4px; }
+.lg-link { border:0; background:none; padding:0; color:var(--ink); font-weight:700; font-size:14px; text-decoration:underline; text-decoration-color:var(--gold); text-decoration-thickness:2px; text-underline-offset:4px; }
+.lg-link:hover { text-decoration-color:var(--ink); }
+.lg-link:focus-visible { outline:2px solid var(--ink); outline-offset:3px; }
+.lg-link:disabled { color:#9a927f; text-decoration:none; cursor:not-allowed; }
+.lg-link.back { display:inline-flex; align-items:center; gap:6px; text-decoration:none; color:var(--ink-soft); }
+.lg-link.back:hover { color:var(--ink); }
+
+/* messages: flat strip with a coloured edge */
+.lg-alert { display:flex; gap:10px; align-items:flex-start; padding:10px 14px; border-radius:8px; border-left:4px solid; font-size:14px; line-height:1.5; margin-bottom:14px; background:var(--field); }
+.lg-alert .lg-ico { margin-top:3px; }
+.lg-alert.error { border-color:#b42318; color:#7a1710; background:#fdf0ec; }
+.lg-alert.success { border-color:#2f7d4f; color:#1d5133; background:#eef7f0; }
+.lg-alert.info { border-color:#b08a1d; color:#4f4020; background:#fbf5e3; margin:18px 0 0; }
+.lg-form .lg-alert { margin:0; }
+.lg-tnum { font-variant-numeric:tabular-nums; }
+
+/* OTP boxes */
+.lg-otp { display:grid; grid-template-columns:repeat(6, 1fr); gap:10px; }
+.lg-otp input { width:100%; height:56px; padding:0; text-align:center; font-family:var(--serif); font-size:26px; font-weight:700; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; background:var(--field); }
+.lg-otp input:focus { outline:0; border-color:var(--gold-deep); background:#fff; box-shadow:0 0 0 4px rgba(227,191,85,.4); }
+.lg-otp input.filled { border-color:var(--ink); }
+.lg-resend { text-align:center; font-size:14px; color:var(--ink-soft); }
+
+/* password rules */
+.lg-req { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px; font-size:14px; }
+.lg-req li { display:flex; align-items:center; gap:9px; color:var(--ink-soft); }
+.lg-req .tick { width:18px; height:18px; border-radius:50%; display:grid; place-items:center; background:#ddd2b0; color:#fff; }
+.lg-req li.ok { color:#1d5133; } .lg-req li.ok .tick { background:#2f7d4f; }
+.lg-req li.bad { color:#7a1710; } .lg-req li.bad .tick { background:#b42318; }
+
+@media (max-width: 520px) {
+  .lg-main { justify-content:flex-start; padding-top:32px; }
+  .lg-card { padding:38px 22px 28px; border-radius:14px; }
+  .lg-head h1 { font-size:27px; }
+}
+@media (max-width: 400px) { .lg-otp { gap:6px; } .lg-otp input { height:50px; font-size:22px; } }
+
+/* check-your-email / checking views */
+.lg-sent { text-align:center; }
+.lg-sent .lg-spin { margin:6px auto 0; border-color:rgba(138,106,15,.25); border-top-color:var(--gold-deep); }
+.lg-sent-ico { width:56px; height:56px; margin:0 auto 12px; border-radius:50%; display:grid; place-items:center; background:#f6e8b6; color:var(--gold-deep); }
+.lg-fine { margin:0; font-size:13px; line-height:1.5; color:var(--ink-soft); }
+
+/* short screens: tighten up so the card still fits without scrolling */
+@media (max-height: 700px) {
+  .lg-main { padding-top:12px; padding-bottom:8px; }
+  .lg-card { padding:26px 32px 20px; }
+  .lg-brand-name { margin-bottom:12px; }
+  .lg-head { margin-bottom:12px; }
+  .lg-form { gap:10px; }
+  .lg-input input { height:42px; }
+  .lg-btn { height:44px; }
+  .lg-foot { margin-top:10px; }
+}

@@ -1,0 +1,63 @@
+/* Shared data-table look (same as the vendor portal): card + bordered grid table + "Showing x to y of z entries" footer.
+   Used by My Orders, Order History and Wallet transactions. */
+.dt-card { --dt-line:#e8e8ec; background:#fff; border:1px solid var(--dt-line); border-radius:14px; overflow:hidden; box-shadow:none; padding:0; }
+.dt-card.is-loading .dt-wrap { opacity:.55; transition:opacity .15s; }
+.dt-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:20px 22px 14px; }
+.dt-head h2 { margin:0; font-size:20px; letter-spacing:-.02em; }
+.dt-head p { margin:4px 0 0; color:#6b6b73; font-size:14px; }
+.dt-tools { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.dt-tools > .dt-count { font-size:13px; font-weight:600; color:#6b7280; }
+.dt-tools button { height:40px; padding:0 14px; border-radius:10px; font-weight:600; font-size:13.5px; }
+.dt-tools button:hover:not(:disabled) { border-color:var(--ink); }
+
+.dt-wrap { overflow-x:auto; padding:0 22px 18px; }
+.dt-table { width:100%; min-width:960px; border-collapse:collapse; border:1px solid var(--dt-line); text-align:left; }
+.dt-table th { padding:12px 14px; text-align:left; white-space:nowrap; font-size:13px; font-weight:700; background:#f1f1f3; border-bottom:1px solid var(--dt-line); border-right:1px solid #e4e4e8; }
+.dt-table td { padding:12px 14px; border-top:1px solid var(--dt-line); border-right:1px solid #f0f0f3; font-size:13.5px; white-space:nowrap; vertical-align:middle; }
+.dt-table th:last-child, .dt-table td:last-child { border-right:0; }
+.dt-table tbody tr:hover { background:#fcfcfa; }
+.dt-table .num { text-align:right; font-variant-numeric:tabular-nums; }
+.dt-table .mono { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12.5px; }
+.dt-table .dt-clip { display:block; max-width:240px; overflow:hidden; text-overflow:ellipsis; }
+.dt-table .dt-link { font-weight:700; color:var(--ink); text-decoration:none; } .dt-table .dt-link:hover { text-decoration:underline; }
+.dt-table .dt-dash { color:#9ca3af; }
+.dt-table .dt-sub { display:block; margin-top:2px; font-size:12px; color:#6b7280; }
+.dt-actions { display:flex; align-items:center; gap:8px; }
+
+/* black "View" button, as in the vendor portal */
+.dt-view { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:7px 22px; border:0; border-radius:8px; background:#0b0b0d; color:#fff; font-weight:600; font-size:13.5px; text-decoration:none; cursor:pointer; }
+.dt-view:hover { background:#2a2a30; color:#fff; }
+.dt-view.alt { background:color-mix(in srgb, var(--accent) 16%, #fff); color:var(--accent-dark); border:1px solid color-mix(in srgb, var(--accent) 60%, #fff); padding:6px 14px; }
+.dt-view.alt:hover:not(:disabled) { background:color-mix(in srgb, var(--accent) 28%, #fff); }
+.dt-view:disabled { opacity:.5; cursor:not-allowed; }
+
+/* status pills: flat, no dot (vendor look) */
+.dt-table .ord-badge { padding:4px 11px; font-size:12.5px; font-weight:600; }
+.dt-table .ord-badge::before { display:none; }
+.dt-table .wl-pill { padding:4px 11px; font-weight:600; }
+
+.dt-empty { display:flex; flex-direction:column; align-items:center; gap:6px; padding:44px 20px; text-align:center; color:#6b6b73; }
+.dt-empty b { font-size:16px; color:var(--ink); } .dt-empty p { margin:0 0 8px; font-size:14px; }
+.dt-empty .btn-link { display:inline-flex; align-items:center; gap:6px; }
+.dt-empty-ico { width:54px; height:54px; border-radius:50%; display:grid; place-items:center; margin-bottom:4px; background:color-mix(in srgb, var(--accent) 16%, #fff); color:var(--accent-dark); }
+.dt-skel { padding:0 22px 22px; display:flex; flex-direction:column; gap:10px; }
+.dt-skel span { display:block; height:44px; border-radius:8px; background:linear-gradient(90deg, #f3f4f6 25%, #e9ebef 37%, #f3f4f6 63%); background-size:400% 100%; animation:dt-shimmer 1.3s ease infinite; }
+@keyframes dt-shimmer { 0% { background-position:100% 0; } 100% { background-position:0 0; } }
+
+/* footer: entries text + pager + rows per page */
+.dt-foot { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:16px 20px; border-top:1px solid var(--dt-line); font-size:14px; }
+.dt-right { display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+.dt-pager { display:flex; align-items:center; gap:8px; }
+.dt-pager button { min-width:36px; height:36px; padding:0; border:0; border-radius:8px; background:none; font-weight:600; display:grid; place-items:center; }
+.dt-pager button:hover:not(:disabled) { background:#f1f1f3; } .dt-pager button:disabled { opacity:.35; cursor:default; }
+.dt-pager button.on { background:var(--accent); color:#fff; }
+.dt-select { appearance:none; height:40px; min-width:112px; padding:0 34px 0 12px; border:1px solid #d9d9df; border-radius:10px; cursor:pointer; font:inherit; font-size:13.5px; outline:none;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b6b73' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 12px center; }
+.dt-select:focus { border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+
+/* filter card above the table: same field sizing as the vendor portal */
+.ord-filters .ord-fld { color:#34343a; font-size:13.5px; font-weight:600; }
+.ord-filters .ord-fld select, .ord-filters .ord-fld input, .ord-filters .ord-search, .ord-filters .ord-reset, .ord-filters .oh-apply { height:44px; border-radius:10px; }
+.ord-filters .ord-search, .ord-filters .ord-fld select, .ord-filters .ord-fld input { border-color:#d9d9df; }
+
+@media (max-width:600px) { .dt-head { padding:16px 14px 10px; } .dt-wrap { padding:0 14px 14px; } .dt-skel { padding:0 14px 14px; } .dt-foot { padding:14px; } }

@@ -1,0 +1,76 @@
+/* Shop Portal invoice page (pages/Invoice.jsx). The sheet is always "paper": white with dark text, in dark mode too. */
+.inv-page { max-width:900px; }
+.inv-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.inv-btn { display:inline-flex; align-items:center; gap:8px; padding:9px 18px; border:1px solid #d1d5db; border-radius:8px; background:#fff; color:#111827; font-weight:600; font-size:14px; cursor:pointer; }
+.inv-btn:hover:not(:disabled) { background:#f3f4f6; }
+.inv-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.inv-btn.primary:hover:not(:disabled) { background:var(--accent-dark); }
+.inv-btn:disabled { opacity:.6; cursor:wait; }
+
+.inv-sheet { --ink:#111827; --muted:#6b7280; background:#fff; color:#111827; border:1px solid #e5e7eb; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.08); padding:34px 36px; font-size:14px; line-height:1.5; }
+.inv-sheet h2, .inv-sheet b, .inv-sheet dd, .inv-sheet th, .inv-sheet td { color:#111827; }
+.inv-sheet p { margin:0; color:#374151; }
+.inv-top { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; flex-wrap:wrap; padding-bottom:18px; border-bottom:2px solid #c49b2c; }
+.inv-brand { display:flex; align-items:center; gap:14px; min-width:0; }
+.inv-brand img { width:78px; height:auto; flex:none; }
+.inv-brand h2 { margin:0 0 3px; font-size:22px; line-height:1.2; }
+.inv-brand p { font-size:13px; }
+.inv-meta { text-align:right; }
+.inv-word { display:block; font-size:26px; font-weight:800; letter-spacing:.06em; color:#c49b2c; line-height:1.1; margin-bottom:6px; }
+.inv-meta dl { display:grid; grid-template-columns:auto auto; gap:2px 14px; margin:0; justify-content:end; font-size:13px; }
+.inv-meta dt { color:#6b7280; text-align:right; }
+.inv-meta dd { margin:0; font-weight:600; text-align:right; }
+
+.inv-parties { display:block; margin:20px 0; border:1px solid #e5e7eb; border-radius:8px; background:#fafafa; }
+.inv-parties > div { padding:14px 16px; min-width:0; }
+.inv-parties > div + div { border-left:1px solid #e5e7eb; }
+.inv-parties small { display:block; margin-bottom:4px; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6b7280; }
+.inv-parties b { display:block; font-size:16px; margin-bottom:2px; overflow-wrap:anywhere; }
+.inv-parties p { font-size:13px; overflow-wrap:anywhere; }
+.inv-addr { white-space:pre-line; }
+
+.inv-table-wrap { overflow-x:auto; }
+.inv-table { width:100%; border-collapse:collapse; font-size:13.5px; }
+.inv-table th { background:#f3f4f6; text-align:left; font-size:12px; letter-spacing:.04em; text-transform:uppercase; padding:9px 12px; border:1px solid #e5e7eb; }
+.inv-table td { padding:10px 12px; border:1px solid #e5e7eb; vertical-align:top; background:#fff; }
+.inv-table small { display:block; margin-top:2px; color:#6b7280; font-size:12px; }
+.inv-table .num { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.inv-table th:first-child, .inv-table td:first-child { width:44px; }
+
+.inv-totals { display:grid; grid-template-columns:1fr auto; gap:6px 28px; width:min(340px, 100%); margin:16px 0 0 auto; }
+.inv-totals dt, .inv-totals dd { margin:0; }
+.inv-totals dd { text-align:right; font-variant-numeric:tabular-nums; }
+.inv-totals .grand { padding-top:8px; border-top:1.5px solid #111827; font-size:17px; font-weight:800; }
+
+.inv-pay { display:flex; flex-wrap:wrap; align-items:center; gap:8px 22px; margin-top:22px; padding:12px 14px; border-radius:8px; background:#f0fdf4; border:1px solid #bbf7d0; font-size:13px; color:#14532d; }
+.inv-pay em { font-style:normal; color:#4b5563; margin-right:5px; }
+.inv-paid { display:inline-flex; align-items:center; gap:6px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:#15803d; }
+.inv-foot { margin-top:26px; padding-top:12px; border-top:1px dashed #d1d5db; font-size:12px; color:#6b7280; text-align:center; }
+
+@media (max-width:640px) {
+  .inv-sheet { padding:20px 16px; }
+  .inv-meta { text-align:left; }
+  .inv-meta dl { justify-content:start; }
+  .inv-meta dt, .inv-meta dd { text-align:left; }
+  .inv-parties { grid-template-columns:1fr; }
+  .inv-parties > div + div { border-left:0; border-top:1px solid #e5e7eb; }
+  .inv-actions { width:100%; } .inv-actions .inv-btn { flex:1; justify-content:center; }
+}
+
+/* Print / "Save as PDF" from the browser: only the sheet */
+@media print {
+  @page { size:A4; margin:12mm; }
+  html, body { background:#fff !important; }
+  .sidebar, .topbar, .footer, .overlay, .inv-noprint { display:none !important; }
+  .shell, .main-col, .content { display:block !important; padding:0 !important; margin:0 !important; max-width:none !important; }
+  .inv-page { max-width:none; }
+  .inv-sheet { border:0; box-shadow:none; padding:0; }
+  .inv-table-wrap { overflow:visible; }
+}
+
+/* "View / Download invoice" strip on the order detail page (pages/OrderDetail.jsx) */
+.odp-invoice { display:flex; align-items:center; justify-content:space-between; gap:12px 18px; flex-wrap:wrap; margin:16px 0; padding:12px 16px; border-radius:10px; background:var(--surface, #fff); border:1px solid color-mix(in srgb, var(--accent) 45%, var(--line, #e5e7eb)); }
+.odp-invoice-text { display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap; color:var(--ink); }
+.odp-invoice-text small { color:var(--muted, #6b7280); font-size:13px; }
+.odp-invoice-btns { display:inline-flex; gap:8px; flex-wrap:wrap; }
+@media print { .odp-invoice { display:none !important; } }

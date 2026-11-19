@@ -1,0 +1,12 @@
+/* "turn on notifications" card (PushPrompt.jsx) */
+.push-prompt { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:1001; width:min(540px, calc(100vw - 24px)); display:flex; align-items:center; gap:12px; background:#fff; border:1px solid #e5e7eb; border-left:4px solid var(--accent, #c49b2c); border-radius:12px; box-shadow:0 12px 32px rgba(15,23,42,.2); padding:12px 12px 12px 14px; animation:pp-in .25s ease-out; }
+.push-prompt .pp-ico { flex:none; width:36px; height:36px; border-radius:50%; background:color-mix(in srgb, var(--accent, #c49b2c) 14%, #fff); color:var(--accent, #c49b2c); display:grid; place-items:center; }
+.push-prompt .pp-text { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; font-size:13.5px; color:#4b5563; overflow-wrap:anywhere; }
+.push-prompt .pp-text b { color:#111827; font-size:14px; }
+.push-prompt .pp-actions { flex:none; display:flex; gap:6px; }
+.push-prompt .pp-actions button { padding:7px 12px; font-size:13.5px; white-space:nowrap; }
+.push-prompt .pp-primary { background:var(--accent, #c49b2c); border-color:var(--accent, #c49b2c); color:#fff; font-weight:600; }
+@keyframes pp-in { from { opacity:0; transform:translate(-50%, 16px); } to { opacity:1; transform:translate(-50%, 0); } }
+@media (max-width:520px) { .push-prompt { flex-wrap:wrap; } .push-prompt .pp-text { flex-basis:calc(100% - 60px); } .push-prompt .pp-actions { width:100%; justify-content:flex-end; } }
+@media (prefers-reduced-motion: reduce) { .push-prompt { animation:none; } }
+@media print { .push-prompt { display:none; } }

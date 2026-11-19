@@ -1,0 +1,18 @@
+/* Orders > Actions column: icon buttons with tooltips (.bh-ico comes from billhistory.css) */
+.od-actions { gap:6px; }
+.od-actions .bh-ico { padding:0; font-size:inherit; line-height:1; }
+.bh-ico.bill { --c:#92400e; background:var(--gold); border-color:var(--gold); color:#fff; }
+.bh-ico.bill:hover, .bh-ico.bill:focus-visible { background:#b88a1f; border-color:#b88a1f; }
+.bh-ico.view.on { background:#dbeafe; border-color:#2563eb; }
+.bh-ico.more { --c:#374151; }
+
+/* the last icon's tooltip is anchored to its right edge so it never widens the table (scrollbar) */
+.od-actions .bh-ico:last-child::after { left:auto; right:0; transform:translateY(3px); }
+.od-actions .bh-ico:last-child::before { left:auto; right:11px; transform:translateY(3px); }
+.od-actions .bh-ico:last-child:hover::after, .od-actions .bh-ico:last-child:focus-visible::after,
+.od-actions .bh-ico:last-child:hover::before, .od-actions .bh-ico:last-child:focus-visible::before { transform:translateY(0); }
+.od-table-wrap { scrollbar-width:none; -ms-overflow-style:none; }
+.od-table-wrap::-webkit-scrollbar { display:none; }
+
+/* "more" dropdown rows get an icon */
+.od-menu button { display:flex; align-items:center; gap:9px; width:100%; }

@@ -1,0 +1,268 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing Table Management</title>
+
+    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
+    <link rel="stylesheet" href="{% static 'pricing/manage.css' %}">
+</head>
+<body>
+
+<div class="manage-page">
+
+    <!-- Header -->
+    <!-- REPLACE YOUR HEADER SEARCH SECTION WITH THIS -->
+<div class="manage-header-card">
+
+    <h1 class="manage-title">Pricing Table Management</h1>
+
+    <form method="get" class="manage-toolbar">
+
+        <!-- Search -->
+        <input type="text"
+               name="search"
+               value="{{ search_query }}"
+               placeholder="Search category..."
+               class="manage-search-input">
+
+        <!-- Category Filter Dropdown -->
+        <select name="category" class="manage-category-filter">
+            <option value="">All Categories</option>
+
+            {% for category in categories %}
+                <option value="{{ category.id }}"
+                    {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>
+                    {{ category.name }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <!-- Search Button -->
+        <button type="submit" class="manage-search-btn">
+            Search
+        </button>
+
+        <!-- Reset -->
+        <a href="{% url 'manage_pricing' %}" class="manage-reset-btn">
+            Reset
+        </a>
+
+        <!-- Back -->
+        <a href="{% url 'pricing_setup' %}" class="manage-back-btn">
+            Back
+        </a>
+
+    </form>
+
+</div>
+
+
+<div class="manage-category-card">
+
+    <div class="manage-category-top">
+        <h2 class="manage-category-title">
+            {% if selected_category %}
+                {{ page_obj.object_list.0.category.name }} Rules
+            {% else %}
+                All Pricing Rules
+            {% endif %}
+        </h2>
+
+        <div class="manage-category-actions">
+            <a href="{% url 'print_price_rules' %}?category={{ selected_category }}&search={{ search_query }}"
+            target="_blank"
+            class="manage-print-btn">
+            Print
+            </a>
+
+            {% if selected_category %}
+            <a href="{% url 'delete_category' selected_category %}"
+            class="manage-delete-table-btn"
+            onclick="return confirm('Delete full category?')">
+            Delete Full Table
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="post" action="{% url 'delete_selected_price_rules' %}" id="bulk-delete-form">
+        {% csrf_token %}
+
+        <input type="hidden" name="page" value="{{ page_obj.number }}">
+        <input type="hidden" name="category" value="{{ selected_category }}">
+        <input type="hidden" name="search" value="{{ search_query }}">
+
+        <div class="manage-bulk-actions">
+            <button type="submit"
+                    class="manage-bulk-delete-btn"
+                    onclick="return confirm('Delete all selected rules?')"
+                    disabled
+                    id="bulk-delete-btn">
+                Delete Selected
+            </button>
+        </div>
+
+        <div class="manage-table-wrap">
+            <table class="manage-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="select-all"></th>
+                        <th>Category</th>
+                        <th>Size</th>
+                        <th>Variant</th>
+                        <th>Qty</th>
+                        <th>Price</th>
+                        <th>Shop</th>
+                        <th>CS</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for rule in page_obj %}
+                    <tr id="rule-{{ rule.id }}">
+                        <td>
+                            <input type="checkbox" name="selected_rules" value="{{ rule.id }}" class="row-checkbox">
+                        </td>
+                        <td>{{ rule.category.name }}</td>
+                        <td>{{ rule.size.name }}</td>
+                        <td>{{ rule.variant.name }}</td>
+                        <td>{{ rule.min_qty }} - {{ rule.max_qty }}</td>
+                        <td>₹{{ rule.price }}</td>
+                        <td>{{ rule.shop_discount }}%</td>
+                        <td>{{ rule.cs_discount }}%</td>
+                        <td>{{ rule.notes|default:"-" }}</td>
+                        <td>
+                            <div class="manage-action-group">
+                                <a href="{% url 'edit_price_rule' rule.id %}?page={{ page_obj.number }}&category={{ selected_category }}&search={{ search_query }}"
+                                 class="manage-edit-btn"
+                                 onclick="localStorage.setItem('editRuleId', 'rule-{{ rule.id }}')">
+                                 Edit
+                                </a>
+                                <a href="{% url 'delete_price_rule' rule.id %}?page={{ page_obj.number }}&category={{ selected_category }}&search={{ search_query }}"
+                                   class="manage-delete-btn"
+                                   onclick="return confirm('Delete this rule?')">
+                                   Delete
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="manage-empty">No price rules found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
+
+</div>
+
+
+
+<!-- PAGINATION -->
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="pagination">
+
+    {% if page_obj.has_previous %}
+        <a href="?page=1&category={{ request.GET.category }}&search={{ request.GET.search }}"
+           class="nav-btn">«</a>
+
+        <a href="?page={{ page_obj.previous_page_number }}&category={{ request.GET.category }}&search={{ request.GET.search }}"
+           class="nav-btn">‹</a>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+
+        {% if num == page_obj.number %}
+
+            <span class="page-number active">
+                {{ num }}
+            </span>
+
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+
+            <a href="?page={{ num }}&category={{ request.GET.category }}&search={{ request.GET.search }}"
+               class="page-number">
+               {{ num }}
+            </a>
+
+        {% endif %}
+
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&category={{ request.GET.category }}&search={{ request.GET.search }}"
+           class="nav-btn">›</a>
+
+        <a href="?page={{ page_obj.paginator.num_pages }}&category={{ request.GET.category }}&search={{ request.GET.search }}"
+           class="nav-btn">»</a>
+    {% endif %}
+
+</div>
+{% endif %}
+
+</div>
+<script>
+document.querySelectorAll('input[type=number]').forEach(input => {
+
+    input.addEventListener('wheel', function(e) {
+        this.blur();
+    });
+
+});
+</script>
+
+<script>
+window.onload = function () {
+
+    const rowId = localStorage.getItem("editRuleId");
+
+    if (rowId) {
+
+        const row = document.getElementById(rowId);
+
+        if (row) {
+            row.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+        }
+
+        localStorage.removeItem("editRuleId");
+    }
+};
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const selectAll = document.getElementById('select-all');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    const bulkBtn = document.getElementById('bulk-delete-btn');
+
+    function updateBulkBtn() {
+        const anyChecked = Array.from(rowCheckboxes).some(cb => cb.checked);
+        bulkBtn.disabled = !anyChecked;
+    }
+
+    selectAll.addEventListener('change', function () {
+        rowCheckboxes.forEach(cb => cb.checked = selectAll.checked);
+        updateBulkBtn();
+    });
+
+    rowCheckboxes.forEach(cb => {
+        cb.addEventListener('change', function () {
+            if (!cb.checked) selectAll.checked = false;
+            updateBulkBtn();
+        });
+    });
+});
+</script>
+
+</body>
+</html>

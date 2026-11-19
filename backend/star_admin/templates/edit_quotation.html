@@ -1,0 +1,1912 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="addx-page">
+
+  <!-- HEADER -->
+  <div class="addx-header">
+    <h1>Edit Quotation</h1>
+
+    <p>Update quotation details</p>
+
+    <a href="{% url 'quotations' %}" class="back-orders-btn">
+      ← Back to Quotations
+    </a>
+  </div>
+
+  <!-- FORM -->
+  <div class="order-form-card addx-form-card">
+
+    <form method="POST">
+        <input type="hidden" name="items_json" id="itemsJson">
+
+      {% csrf_token %}
+
+      <!-- TOP DETAILS -->
+      <div class="form-grid addx-form-grid">
+
+        <div class="form-group">
+            <label>Customer Name</label>
+            <input type="text"
+                name="customer_name"
+                value="{{ quotation.customer_name }}"
+                required>
+        </div>
+
+        <div class="form-group">
+            <label>Mobile Number</label>
+            <input type="text"
+                name="customer_phone"
+                value="{{ quotation.customer_phone }}">
+        </div>
+
+        <div class="form-group">
+            <label>Quotation Date</label>
+            <input type="text"
+                id="quotationDate"
+                name="quotation_date"
+                value="{{ quotation.quotation_date|date:'d-m-Y' }}"
+                required>
+        </div>
+        
+        
+        <div class="form-group addx-form-group">
+          <label>Work Name</label>
+          <input type="text"
+                name="work_name"
+                value="{{ quotation.work_name }}" 
+                required>
+        </div>
+        </div>
+      </div>
+      
+
+
+      <!-- ITEM SECTION -->
+      <div class="order-items-card">
+
+        <h2>Items</h2>
+
+<!-- BILLING TYPE -->
+<div class="billing-top-row">
+  <div>
+    <label>Select Billing Type</label>
+
+    <select id="billingType">
+
+        <option value="normal">Normal print</option>
+
+        <option value="digital">Digital print</option>
+
+    </select>
+  </div>
+  <div id="customerTypeWrapper">
+    <label>Customer Type</label>
+
+    <select id="customerType">
+      <option value="customer">Customer</option>
+      <option value="shop">Shop</option>
+    </select>
+  </div>
+</div>
+
+
+
+<!-- NORMAL -->
+<div id="normalBillingFields"
+     class="items-grid-normal">
+
+    <select id="itemCategory">
+        <option value="">
+        Select Category
+    </option>
+        <option value="manual">OTHERS</option>
+
+    {% for cat in categories %}
+
+    <option value="{{ cat.id }}">
+        {{ cat.name }}
+    </option>
+
+    {% endfor %}
+    </select>
+
+    <input type="text"
+           id="manualItemName"
+           placeholder="Manual Item Name"
+           style="display:none;">
+
+    <select id="itemSize">
+        <option value="">Select Size</option>
+    </select>
+
+    <select id="itemVariant">
+        <option value="">Select Variant</option>
+    </select>
+
+    <input type="number"
+           id="itemQty"
+           placeholder="Qty">
+
+    <input type="number"
+       id="itemJob"
+       placeholder="Job"
+       value="1">
+
+</div>
+
+
+<!-- DIGITAL -->
+<div id="digitalBillingFields"
+     class="items-grid-digital"
+     style="display:none;">
+
+    <select id="digitalCategory">
+        <option value="">
+        Select Category
+    </option>
+
+    {% for cat in digital_categories %}
+
+    <option value="{{ cat.id }}">
+        {{ cat.name }}
+    </option>
+
+    {% endfor %}
+    </select>
+
+    <select id="digitalGsm">
+        <option value="">Select GSM</option>
+    </select>
+
+    <select id="digitalProduct">
+        <option value="">Select Product</option>
+    </select>
+
+    <select id="digitalLamination">
+        <option value="">
+            Select Lamination
+        </option>
+    </select>
+
+    <select id="digitalSide">
+        <option value="">Select Side</option>
+        <option value="single">Single Side</option>
+        <option value="double">Double Side</option>
+    </select>
+
+    <select id="digitalDelivery">
+        <option value="">Select Delivery</option>
+
+        {% for delivery in delivery_types %}
+
+            <option value="{{ delivery.id }}">
+                {{ delivery.name }}
+            </option>
+
+        {% endfor %}
+    </select>
+
+    <input type="number"
+           id="digitalQty"
+           placeholder="Qty">
+
+    <input type="number"
+       id="digitalJob"
+       placeholder="Job"
+       value="1">
+
+</div>
+
+
+<!-- PRICE ROW -->
+<div class="price-row">
+
+    <input type="text"
+           id="itemPrice"
+           placeholder="Price"
+           readonly>
+
+    <input type="text"
+           id="itemTotal"
+           placeholder="Total"
+           readonly>
+
+    <button type="button"
+            class="add-item-btn"
+            onclick="addOrderItem()">
+
+        Add
+    </button>
+
+</div>
+
+
+        <!-- TABLE -->
+        <table class="order-items-table">
+
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Qty</th>
+              <th>Job</th>
+              <th>Price</th>
+              <th>Total</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+
+          <tbody id="orderItemsBody">
+          </tbody>
+
+        </table>
+
+      </div>
+
+
+      <!-- PAYMENT SUMMARY -->
+      <div class="payment-summary-card">
+
+        <div class="summary-grid">
+
+          <!-- GROSS -->
+          <div class="form-group addx-form-group">
+            <label>Gross Total</label>
+
+            <input type="text"
+                   id="grossTotal"
+                   name="total_amount"
+                   readonly
+                   value="0.00">
+          </div>
+
+          
+          <!-- NOTES -->
+        {% comment %} <div class="form-group addx-form-group addx-full">
+          <label>Description / Notes</label>
+
+          <textarea name="notes"
+            placeholder="Paper type, urgent work, design notes, printing details..."></textarea>
+        </div> {% endcomment %}
+
+        </div>
+
+      </div>
+
+
+      <!-- SAVE -->
+      <div class="addx-btn-row">
+
+        <button type="submit"
+                class="addx-save-btn">
+
+          Update Quotation
+        </button>
+
+        <a href="{% url 'quotations' %}"
+           class="addx-cancel-btn">
+
+          Cancel
+        </a>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+
+
+<script>
+
+
+let orderItems = [
+
+{% for item in quotation.items.all %}
+{
+    billing_type: "{{ item.billing_type }}",
+
+    category_id: "{% if item.manual_name %}manual{% elif item.billing_type == 'digital' %}{{ item.digital_category.id }}{% else %}{{ item.category.id }}{% endif %}",
+
+    category: "{% if item.manual_name %}OTHERS{% elif item.billing_type == 'digital' %}{{ item.digital_category }}{% else %}{{ item.category }}{% endif %}",
+
+    size_id: "{% if item.billing_type == 'digital' %}{{ item.digital_gsm.id }}{% else %}{{ item.size.id }}{% endif %}",
+    size: "{% if item.billing_type == 'digital' %}{{ item.digital_gsm }}{% else %}{{ item.size }}{% endif %}",
+
+    variant_id: "",
+    variant: "{% if item.manual_name %}{{ item.manual_name|escapejs }}{% elif item.billing_type == 'digital' %}{{ item.digital_product }}{% else %}{{ item.variant }}{% endif %}",
+
+    qty: {{ item.qty }},
+    job: {{ item.job }},
+    price: {{ item.price }},
+    total: {{ item.total }},
+
+    lamination_id: "{{ item.digital_lamination.id|default:'' }}",
+    lamination: "{{ item.digital_lamination|default:'' }}",
+
+    side: "{{ item.side|default:'' }}",
+    side_name: "{{ item.side_name|default:'' }}",
+    delivery_type: "{{ item.work_type|default:'' }}",
+    customer_type: "{{ item.customer_type|default:'' }}",
+},
+{% endfor %}
+
+
+];
+console.log(orderItems);
+let editIndex = -1;
+
+window.onload = function () {
+    renderItems();
+};
+
+
+
+
+/* ADD ITEM */
+function addOrderItem() {
+
+    const categoryValue =
+        document.getElementById("itemCategory").value;
+
+    /* =========================
+       MANUAL ITEM (OTHERS)
+    ========================= */
+    if (billingType.value === "normal" && categoryValue === "manual") {
+
+        let manualName =
+            document.getElementById("manualItemName").value.trim();
+
+        let qty =
+            parseFloat(document.getElementById("itemQty").value) || 0;
+
+        let job =
+            parseFloat(document.getElementById("itemJob").value) || 1;
+
+        let price =
+            parseFloat(document.getElementById("itemPrice").value) || 0;
+
+        let total =
+            parseFloat(document.getElementById("itemTotal").value) ||
+            (qty * price * job);
+
+        if (!manualName || qty <= 0 || price <= 0) {
+            showToast("Enter manual item details");
+            return;
+        }
+
+        let itemData = {
+
+            category_id: "manual",
+            category: "OTHERS",
+
+            size_id: "",
+            size: "",
+
+            variant_id: "",
+            variant: manualName,
+
+            lamination_id: "",
+            lamination: "",
+
+            side: "",
+            side_name: "",
+
+            delivery_type: "",
+
+            customer_type:
+                document.getElementById("customerType").value,
+
+            qty: qty,
+            job: job,
+            price: price,
+            total: total,
+
+            billing_type: "normal"
+        };
+
+        if (editIndex >= 0) {
+
+            orderItems.splice(editIndex, 0, itemData);
+            editIndex = -1;
+
+            document.querySelector(".add-item-btn").innerText = "Add";
+
+        } else {
+
+            orderItems.push(itemData);
+        }
+
+        renderItems();
+        clearItemFields();
+
+        return;
+    }
+
+    const isDigital =
+      billingType.value === "digital";
+
+    let category, size, variant, qty, lamination;
+    let job = 1;
+let digitalJob = 1;
+
+    /* NORMAL */
+    if (!isDigital) {
+
+        category =
+          document.getElementById("itemCategory");
+
+        size =
+          document.getElementById("itemSize");
+
+        variant =
+          document.getElementById("itemVariant");
+
+        qty =
+          parseFloat(
+            document.getElementById("itemQty").value
+          ) || 0;
+        
+        job =
+    parseFloat(
+        document.getElementById("itemJob").value
+    ) || 1;
+    }
+
+    /* DIGITAL */
+    else {
+
+        category =
+          document.getElementById("digitalCategory");
+
+        size =
+          document.getElementById("digitalGsm");
+
+        variant =
+          document.getElementById("digitalProduct");
+
+        lamination =
+          document.getElementById("digitalLamination");
+
+        qty =
+          parseFloat(
+            document.getElementById("digitalQty").value
+          ) || 0;
+
+          digitalJob =
+    parseFloat(
+        document.getElementById("digitalJob").value
+    ) || 1;
+    }
+
+    let price =
+      parseFloat(
+        document.getElementById("itemPrice").value
+      ) || 0;
+
+    let total =
+      parseFloat(
+        document.getElementById("itemTotal").value
+      ) || 0;
+
+    if (
+        !category.value ||
+        !size.value ||
+        !variant.value ||
+        qty <= 0
+    ) {
+
+        showToast("Fill all item fields");
+        return;
+    }
+
+    let itemData = {
+
+        category_id: category.value,
+        category:
+          category.options[
+            category.selectedIndex
+          ].text,
+
+        size_id: size.value,
+        size:
+          size.options[
+            size.selectedIndex
+          ].text,
+
+        variant_id: variant.value,
+        variant:
+          variant.options[
+            variant.selectedIndex
+          ].text,
+
+        lamination_id:
+            isDigital ? lamination.value : "",
+
+        lamination:
+            isDigital
+            ? lamination.options[
+                lamination.selectedIndex
+              ].text
+            : "",
+
+        side:
+    document.getElementById("digitalSide").value,
+
+side_name:
+    document.getElementById("digitalSide")
+        .options[
+            document.getElementById("digitalSide").selectedIndex
+        ].text,
+
+delivery_type:
+document.getElementById("digitalDelivery").value,
+
+customer_type:
+document.getElementById("customerType").value,
+
+        qty: qty,
+        job: isDigital ? digitalJob : job,
+        price: price,
+        total: total,
+
+        billing_type:
+          isDigital ? "digital" : "normal"
+    };
+
+    if(editIndex >= 0){
+
+    orderItems.splice(editIndex, 0, itemData);
+
+    editIndex = -1;
+
+    document.querySelector(".add-item-btn").innerText = "Add";
+
+}else{
+
+    orderItems.push(itemData);
+}
+
+    renderItems();
+
+    clearItemFields();
+}
+
+
+
+/* RENDER ITEMS */
+function renderItems() {
+
+    let tbody =
+      document.getElementById("orderItemsBody");
+
+    tbody.innerHTML = "";
+
+    let gross = 0;
+
+    orderItems.forEach((item, index) => {
+
+        gross += item.total;
+
+        let itemLabel = [
+            item.category,
+            item.size,
+            item.variant,
+            item.lamination,
+            item.side_name
+        ].filter(Boolean).join(" - ");
+
+        tbody.innerHTML += `
+        <tr>
+
+          <td>
+            ${itemLabel}
+            <input type="hidden" name="item_category[]" value="${item.category_id}">
+            <input type="hidden" name="item_size[]" value="${item.size_id}">
+            <input type="hidden" name="item_variant[]" value="${item.variant_id}">
+            <input type="hidden" name="item_qty[]" value="${item.qty}">
+            <input type="hidden" name="item_price[]" value="${item.price}">
+            <input type="hidden" name="item_total[]" value="${item.total}">
+            <input type="hidden" name="billing_type[]" value="${item.billing_type}">
+            <input type="hidden" name="item_side[]" value="${item.side || ''}">
+            <input type="hidden" name="item_side_name[]" value="${item.side_name || ''}">
+            <input type="hidden" name="item_job[]" value="${item.job}">
+            <input type="hidden" name="item_lamination[]" value="${item.lamination_id || ''}">
+            <input type="hidden" name="customer_type[]" value="${item.customer_type || ''}">
+            <input type="hidden" name="work_type[]" value="${item.delivery_type || ''}">
+          </td>
+
+          <td>${item.qty}</td>
+
+          <td>${item.job || 1}</td>
+
+          <td>₹${item.price.toFixed(2)}</td>
+
+          <td>₹${item.total.toFixed(2)}</td>
+
+          <td>
+          <div class="action-btns">
+          <div class="tooltip">
+          <button type="button"
+            onclick="editItem(${index})">
+            ✏️
+        </button>
+        <span class="tooltip-text">Edit</span>
+        </div>
+              
+              <div class="tooltip">
+                <button type="button"
+                    onclick="removeItem(${index})">X</button>
+                    <span class="tooltip-text">Remove</span>
+              </div>
+           </div>
+          </td>
+
+        </tr>
+        `;
+    });
+
+    document.getElementById("grossTotal").value =
+      gross.toFixed(2);
+
+    calculateDue();
+}
+
+
+
+
+/* REMOVE ITEM */
+function removeItem(index) {
+
+    orderItems.splice(index, 1);
+
+    renderItems();
+}
+
+
+function editItem(index) {
+
+    editIndex = index;
+
+    let item = orderItems[index];
+
+    orderItems.splice(index, 1);
+
+    renderItems();
+
+    document.querySelector(".add-item-btn").innerText =
+      "Update";
+
+    /* MANUAL (OTHERS) */
+    if (item.category_id === "manual") {
+
+        billingType.value = "normal";
+
+        updateBillingView();
+
+        document.getElementById("itemCategory").value = "manual";
+        document.getElementById("itemCategory").dispatchEvent(new Event("change"));
+
+        document.getElementById("manualItemName").value =
+          item.variant || "";
+
+        document.getElementById("itemQty").value =
+          item.qty;
+
+        document.getElementById("itemJob").value =
+          item.job || 1;
+
+        document.getElementById("itemPrice").value =
+          item.price;
+
+        document.getElementById("itemTotal").value =
+          item.total;
+
+        return;
+    }
+
+    /* DIGITAL */
+    if (item.billing_type === "digital") {
+
+    billingType.value = "digital";
+
+    updateBillingView();
+
+    document.getElementById("digitalCategory").value =
+      item.category_id;
+
+    document.getElementById("digitalSide").value =
+      item.side;
+
+    document.getElementById("digitalDelivery").value =
+item.delivery_type;
+
+document.getElementById("customerType").value =
+item.customer_type;
+
+      document.getElementById("digitalJob").value =
+  item.job || 1;
+
+    fetch(`/get-digital-gsm/?category_id=${item.category_id}`)
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        digitalGsm.innerHTML =
+          '<option value="">Select GSM</option>';
+
+        data.gsms.forEach(gsm => {
+
+            digitalGsm.innerHTML += `
+                <option value="${gsm.id}">
+                    ${gsm.name}
+                </option>
+            `;
+        });
+
+        document.getElementById("digitalGsm").value =
+          item.size_id;
+
+        return fetch(
+          `/get-digital-products/?gsm_id=${item.size_id}&side=${item.side}`
+        );
+    })
+
+    .then(res => res.json())
+.then(data => {
+
+    digitalProduct.innerHTML =
+        '<option value="">Select Product</option>';
+
+    data.products.forEach(product => {
+
+        digitalProduct.innerHTML += `
+            <option value="${product.id}">
+                ${product.name}
+            </option>`;
+    });
+
+    digitalProduct.value = item.variant_id;
+
+    return fetch(
+        `/get-digital-laminations/?product_id=${item.variant_id}`
+    );
+
+})
+.then(res => res.json())
+.then(data => {
+
+    digitalLamination.innerHTML =
+        '<option value="">Select Lamination</option>';
+
+    data.laminations.forEach(lam => {
+
+        digitalLamination.innerHTML += `
+            <option value="${lam.id}">
+                ${lam.name}
+            </option>`;
+    });
+
+    digitalLamination.value = item.lamination_id;
+
+    digitalQty.value = item.qty;
+    digitalJob.value = item.job || 1;
+
+    itemPrice.value = item.price;
+    itemTotal.value = item.total;
+
+    fetchDigitalPrice();     // <-- IMPORTANT
+});
+}
+
+/* NORMAL */
+else {
+
+    billingType.value = "normal";
+
+    updateBillingView();
+
+    document.getElementById("itemCategory").value =
+      item.category_id;
+
+    document.getElementById("itemCategory").dispatchEvent(new Event("change"));
+
+    document.getElementById("digitalJob").value =
+      item.job || 1;
+
+    fetch(`/get-sizes/?category_id=${item.category_id}`)
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        itemSize.innerHTML =
+          '<option value="">Select Size</option>';
+
+        data.sizes.forEach(size => {
+
+            itemSize.innerHTML += `
+                <option value="${size.id}">
+                    ${size.name}
+                </option>
+            `;
+        });
+
+        document.getElementById("itemSize").value =
+          item.size_id;
+
+        return fetch(
+          `/get-variants/?size_id=${item.size_id}`
+        );
+
+    })
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        itemVariant.innerHTML =
+          '<option value="">Select Variant</option>';
+
+        data.variants.forEach(variant => {
+
+            itemVariant.innerHTML += `
+                <option value="${variant.id}">
+                    ${variant.name}
+                </option>
+            `;
+        });
+
+        setTimeout(() => {
+
+            document.getElementById("itemVariant").value =
+              item.variant_id;
+
+        }, 100);
+
+        document.getElementById("itemQty").value =
+          item.qty;
+
+        document.getElementById("itemPrice").value =
+          item.price;
+
+        document.getElementById("itemTotal").value =
+          item.total;
+
+    });
+
+}
+}
+
+
+
+/* DUE */
+function calculateDue() {
+
+    return
+}
+
+
+const categorySelect = document.getElementById("itemCategory");
+const sizeSelect = document.getElementById("itemSize");
+const variantSelect = document.getElementById("itemVariant");
+const manualItemNameInput = document.getElementById("manualItemName");
+
+categorySelect.addEventListener("change", function () {
+
+    const categoryId = this.value;
+
+    document.getElementById("itemPrice").value = "";
+    document.getElementById("itemTotal").value = "";
+
+    /* MANUAL (OTHERS) */
+    if (categoryId === "manual") {
+
+        manualItemNameInput.style.display = "block";
+        sizeSelect.style.display = "none";
+        variantSelect.style.display = "none";
+
+        sizeSelect.innerHTML = '<option value="">Select Size</option>';
+        variantSelect.innerHTML = '<option value="">Select Variant</option>';
+
+        document.getElementById("itemPrice").readOnly = false;
+
+        return;
+    }
+
+    manualItemNameInput.style.display = "none";
+    sizeSelect.style.display = "";
+    variantSelect.style.display = "";
+
+    document.getElementById("itemPrice").readOnly = true;
+
+    sizeSelect.innerHTML = '<option value="">Select Size</option>';
+    variantSelect.innerHTML = '<option value="">Select Variant</option>';
+
+    if (!categoryId) return;
+
+    fetch(`/get-sizes/?category_id=${categoryId}`)
+        .then(response => response.json())
+        .then(data => {
+
+            data.sizes.forEach(size => {
+
+                sizeSelect.innerHTML += `
+                    <option value="${size.id}">
+                        ${size.name}
+                    </option>
+                `;
+            });
+        });
+
+});
+
+sizeSelect.addEventListener("change", function () {
+
+    const sizeId = this.value;
+
+    variantSelect.innerHTML = '<option value="">Select Variant</option>';
+
+    if (!sizeId) return;
+
+    fetch(`/get-variants/?size_id=${sizeId}`)
+        .then(response => response.json())
+        .then(data => {
+
+            variantSelect.innerHTML =
+                '<option value="">Select Variant</option>';
+
+            data.variants.forEach(variant => {
+
+                variantSelect.innerHTML += `
+                    <option value="${variant.id}">
+                        ${variant.name}
+                    </option>
+                `;
+            });
+
+        });
+
+});
+
+const priceInput = document.getElementById("itemPrice");
+const qtyInput = document.getElementById("itemQty");
+const totalInput = document.getElementById("itemTotal");
+
+/* =========================
+   DIGITAL PRINT
+========================= */
+
+const billingType =
+document.getElementById("billingType");
+
+const normalFields =
+document.getElementById("normalBillingFields");
+
+const digitalFields =
+document.getElementById("digitalBillingFields");
+
+/* DIGITAL SELECTS */
+const digitalCategory =
+document.getElementById("digitalCategory");
+
+const digitalGsm =
+document.getElementById("digitalGsm");
+
+const digitalProduct =
+document.getElementById("digitalProduct");
+
+const digitalDelivery =
+document.getElementById("digitalDelivery");
+
+const digitalQty =
+document.getElementById("digitalQty");
+
+const customerTypeWrapper =
+document.getElementById("customerTypeWrapper");
+
+
+/* TOGGLE */
+function updateBillingView() {
+
+    if (billingType.value === "digital") {
+
+        normalFields.style.display = "none";
+
+        digitalFields.style.display = "grid";
+
+        customerTypeWrapper.style.display = "block";
+
+    }
+
+    else {
+
+        normalFields.style.display = "grid";
+
+        digitalFields.style.display = "none";
+
+        customerTypeWrapper.style.display = "none";
+    }
+
+    itemPrice.value = "";
+itemTotal.value = "";
+}
+
+
+/* RUN ON CHANGE */
+billingType.addEventListener(
+    "change",
+    updateBillingView
+);
+
+
+/* RUN ON PAGE LOAD */
+updateBillingView();
+
+
+/* CATEGORY -> GSM */
+digitalCategory.addEventListener("change", function () {
+
+    fetch(`/get-digital-gsm/?category_id=${this.value}`)
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        digitalGsm.innerHTML =
+          '<option value="">Select GSM</option>';
+
+        data.gsms.forEach(gsm => {
+
+            digitalGsm.innerHTML += `
+                <option value="${gsm.id}">
+                    ${gsm.name}
+                </option>
+            `;
+        });
+
+    });
+
+});
+
+const digitalLamination =
+document.getElementById("digitalLamination");
+
+const digitalSide =
+document.getElementById("digitalSide");
+
+
+function loadDigitalProducts() {
+
+    let gsmId = digitalGsm.value;
+
+    if (!gsmId) return;
+
+    fetch(`/get-digital-products/?gsm_id=${gsmId}`)
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        digitalProduct.innerHTML =
+            '<option value="">Select Product</option>';
+
+        data.products.forEach(product => {
+
+            digitalProduct.innerHTML += `
+                <option value="${product.id}">
+                    ${product.name}
+                </option>
+            `;
+        });
+
+    });
+
+}
+
+digitalProduct.addEventListener("change", function () {
+
+    fetch(
+        `/get-digital-laminations/?product_id=${this.value}`
+    )
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        digitalLamination.innerHTML =
+            '<option value="">Select Lamination</option>';
+
+        data.laminations.forEach(lamination => {
+
+            digitalLamination.innerHTML += `
+                <option value="${lamination.id}">
+                    ${lamination.name}
+                </option>
+            `;
+        });
+
+    });
+
+});
+
+digitalGsm.addEventListener(
+    "change",
+    loadDigitalProducts
+);
+
+
+
+digitalSide.addEventListener(
+    "change",
+    fetchDigitalPrice
+);
+
+
+/* FETCH DIGITAL PRICE */
+function fetchDigitalPrice() {
+
+    const laminationId =
+      digitalLamination.value;
+
+    const qty =
+      digitalQty.value;
+
+   const deliveryType =
+digitalDelivery.value;
+    
+    const digitalJob =
+    parseFloat(
+        document.getElementById("digitalJob").value
+    ) || 1;
+
+    const customerType =
+      document.getElementById("customerType").value;
+
+    if (!laminationId || !qty) {
+        return;
+    }
+
+    fetch(
+      `/get-digital-price/?lamination_id=${laminationId}&side=${digitalSide.value}&delivery_type=${deliveryType}&qty=${qty}`
+    )
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        if (!data.success) {
+
+            document.getElementById("itemPrice").value = "";
+            document.getElementById("itemTotal").value = "";
+
+            return;
+        }
+
+        let finalPrice = 0;
+
+if (customerType === "shop") {
+
+    finalPrice = parseFloat(data.shop_rate);
+
+} else {
+
+    finalPrice = parseFloat(data.customer_rate);
+
+}
+
+        document.getElementById("itemPrice").value =
+          finalPrice.toFixed(2);
+
+        document.getElementById("itemTotal").value =
+  (finalPrice * digitalJob).toFixed(2);
+
+    });
+
+}
+
+
+/* EVENTS */
+digitalProduct.addEventListener(
+    "change",
+    fetchDigitalPrice
+);
+
+digitalQty.addEventListener(
+    "input",
+    fetchDigitalPrice
+);
+
+
+
+digitalDelivery.addEventListener(
+    "change",
+    fetchDigitalPrice
+);
+
+document.getElementById("customerType")
+.addEventListener(
+    "change",
+    fetchDigitalPrice
+);
+
+/* MANUAL (OTHERS) TOTAL */
+function calculateManualTotal() {
+
+    let qty = parseFloat(qtyInput.value) || 0;
+    let price = parseFloat(priceInput.value) || 0;
+    let job = parseFloat(document.getElementById("itemJob").value) || 1;
+
+    totalInput.value = (qty * price * job).toFixed(2);
+}
+
+function fetchPrice() {
+
+    const categoryId = categorySelect.value;
+
+    /* MANUAL (OTHERS) */
+    if (categoryId === "manual") {
+        calculateManualTotal();
+        return;
+    }
+
+    const sizeId = sizeSelect.value;
+    const variantId = variantSelect.value;
+    const qty = qtyInput.value || 1;
+
+    console.log(categoryId, sizeId, variantId, qty);
+    if (!categoryId || !sizeId || !variantId) {
+        return;
+    }
+
+    fetch(
+      `/get-order-price/?category_id=${categoryId}&size_id=${sizeId}&variant_id=${variantId}&qty=${qty}`
+    )
+    .then(response => response.json())
+    .then(data => {
+
+        priceInput.value = data.price || 0;
+
+        calculateItemTotal();
+
+    });
+
+}
+
+digitalLamination.addEventListener(
+    "change",
+    fetchDigitalPrice
+);
+
+variantSelect.addEventListener(
+    "change",
+    fetchPrice
+);
+
+qtyInput.addEventListener(
+    "input",
+    fetchPrice
+);
+
+priceInput.addEventListener(
+    "input",
+    fetchPrice
+);
+
+document.getElementById("itemJob")
+.addEventListener(
+    "input",
+    function () {
+        if (categorySelect.value === "manual") {
+            calculateManualTotal();
+        } else {
+            calculateItemTotal();
+        }
+    }
+);
+
+document.getElementById("digitalJob")
+.addEventListener(
+    "input",
+    fetchDigitalPrice
+);
+
+sizeSelect.addEventListener(
+    "change",
+    fetchPrice
+);
+
+/* =========================================
+   BILL BOOK CUSTOM PRICE CALCULATOR
+   (Category: Bill Book | Normal Print)
+   Fully JS-calculated, does NOT use PriceRule table.
+   Kept identical to the one used on the Billing page so
+   pricing never disagrees between Quotations and Billing.
+========================================= */
+/* =========================================
+   BILL BOOK PRINT COST (Notice-style step table)
+   Same breakpoint tables/behavior as the Notice category's print
+   charge, but keyed on total PAPERS (books x 100) instead of pieces.
+   Values come straight from the size-wise printing charge sheet.
+========================================= */
+/* =========================================
+   BILL BOOK ROUND-OFF
+   Only for Bill Book category totals.
+     last digit 1-4 -> round UP to nearest 5
+     last digit 6-9 -> round UP to nearest 10
+     last digit 0 or 5 -> unchanged
+   e.g. 422 -> 425, 426 -> 430
+========================================= */
+function billBookRoundOff(amount) {
+
+    let rounded = Math.round(amount);
+    let lastDigit = rounded % 10;
+
+    if (lastDigit === 0 || lastDigit === 5) {
+        return rounded;
+    } else if (lastDigit >= 1 && lastDigit <= 4) {
+        return rounded + (5 - lastDigit);
+    } else {
+        return rounded + (10 - lastDigit);
+    }
+}
+
+function billBookPrintCost(totalPapers, isLegal, isA5, isA6) {
+
+    const A4_TABLE  = [[100,150],[200,180],[300,200],[500,250],[1000,250],[2000,500],[3000,750],[4000,1000],[5000,1250],[10000,2500]];
+    const A5_TABLE  = [[100,150],[200,150],[300,180],[500,200],[1000,250],[2000,250],[3000,500],[4000,500],[5000,750],[10000,1250]];
+    const LGL_TABLE = [[100,180],[200,200],[300,220],[500,270],[1000,300],[2000,600],[3000,900],[4000,1200],[5000,1500],[10000,3000]];
+    const A6_TABLE  = [[400,150],[600,150],[800,180],[1200,200],[1500,250],[4000,250],[6000,500],[8000,750],[12000,1000],[15000,1250],[40000,2500]];
+
+    let table = isLegal ? LGL_TABLE : (isA5 ? A5_TABLE : (isA6 ? A6_TABLE : A4_TABLE));
+
+    if (totalPapers <= 0) return 0;
+
+    for (let i = 0; i < table.length; i++) {
+        if (totalPapers <= table[i][0]) {
+            return table[i][1];
+        }
+    }
+
+    /* Beyond the last listed breakpoint: extrapolate using the slope
+       between the last two breakpoints (per 1000 papers). */
+    let last = table[table.length - 1];
+    let prev = table[table.length - 2];
+    let ratePer1000 = (last[1] - prev[1]) / ((last[0] - prev[0]) / 1000);
+    let extraSteps = Math.ceil((totalPapers - last[0]) / 1000);
+
+    return Math.round((last[1] + (extraSteps * ratePer1000)) * 100) / 100;
+}
+
+function calculateBillBookPrice(qty, job, variantText, sizeText) {
+
+    qty = parseFloat(qty) || 0;
+    job = parseFloat(job) || 1;
+    variantText = (variantText || "").toLowerCase();
+    sizeText = (sizeText || "").toLowerCase();
+
+    const PAPERS_PER_BOOK = 100;
+
+    let totalBooks = qty;
+    let totalPapers = totalBooks * PAPERS_PER_BOOK;
+
+    let isLegal = sizeText.includes("legal");
+    let isA5 = sizeText.includes("a5");
+    let isA6 = sizeText.includes("a6");
+
+    let originalRate, duplicateRate, designChargeAmount;
+
+    if (isLegal) {
+        originalRate = 0.60;
+        duplicateRate = 0.40;
+        designChargeAmount = 200;
+    } else {
+        // Base original-sheet and duplicate-sheet rates (A4 full rate); A5 is half, A6 is a quarter.
+        // "Low" quality only ever applies to the Original sheet, at the A4 base rate.
+        let baseOriginalRate = variantText.includes("low") ? 0.35 : 0.42;
+        let baseDuplicateRate = 0.30;
+
+        if (isA5) {
+            originalRate = baseOriginalRate / 2;   // A5 = 0.21 (or 0.175 if low)
+            duplicateRate = baseDuplicateRate / 2; // A5 = 0.15
+            designChargeAmount = 100;
+        } else if (isA6) {
+            originalRate = baseOriginalRate / 4;   // A6 = 0.105 (or 0.0875 if low)
+            duplicateRate = baseDuplicateRate / 4; // A6 = 0.075
+            designChargeAmount = 100;
+        } else {
+            originalRate = baseOriginalRate;   // A4 = 0.42 (or 0.35 if low)
+            duplicateRate = baseDuplicateRate; // A4 = 0.30
+            designChargeAmount = 150;
+        }
+    }
+
+    let paperRate = variantText.includes("dupl")
+        ? originalRate + duplicateRate   // Dupl. book = original sheet + carbon sheet
+        : originalRate;                  // Original-only book = just the original sheet
+
+    let paperCost = Math.round(totalPapers * paperRate * 100) / 100;
+
+    /* ---- Print cost: Notice-style step table, by size ---- */
+    let printCost = billBookPrintCost(totalPapers, isLegal, isA5, isA6);
+
+    let designCharge = totalBooks > 0 ? designChargeAmount : 0;
+
+    let bindingRate;
+
+    if (isLegal) {
+        if (totalBooks <= 10) bindingRate = 60;
+        else if (totalBooks <= 30) bindingRate = 50;
+        else bindingRate = 40;
+    } else if (isA5) {
+        if (totalBooks <= 10) bindingRate = 30;
+        else if (totalBooks <= 30) bindingRate = 25;
+        else bindingRate = 20;
+    } else if (isA6) {
+        if (totalBooks <= 10) bindingRate = 20;
+        else if (totalBooks <= 30) bindingRate = 15;
+        else bindingRate = 12;
+    } else {
+        // Default: A4
+        if (totalBooks <= 10) bindingRate = 50;
+        else if (totalBooks <= 30) bindingRate = 40;
+        else bindingRate = 30;
+    }
+
+    let bindingCost = totalBooks * bindingRate;
+
+    return billBookRoundOff(Math.round((paperCost + printCost + designCharge + bindingCost) * job * 100) / 100);
+}
+
+/* =========================================
+   NOTICE CUSTOM PRICE CALCULATOR
+   Fully JS-calculated, does NOT use PriceRule table.
+   Kept identical to the one used on the Billing page so
+   pricing never disagrees between Quotations and Billing.
+========================================= */
+function calculateNoticePrice(qty, job, sizeText, variantText) {
+
+    qty = parseFloat(qty) || 0;
+    job = parseFloat(job) || 1;
+    sizeText = (sizeText || "").toLowerCase();
+    variantText = (variantText || "").toLowerCase();
+
+    let isLegal = sizeText.includes("legal") || sizeText.includes("lgl");
+    let isA5 = sizeText.includes("a5");
+
+    let paperRate = isLegal ? 0.60 : (isA5 ? 0.21 : 0.42); // A4 default
+
+    let paperCost = Math.round(qty * paperRate * 100) / 100;
+
+    let baseDesignCharge = 0;
+
+    if (qty > 0) {
+        baseDesignCharge = isLegal ? 200 : (isA5 ? 100 : 150); // A4 default
+    }
+
+    function printSlab(q) {
+        if (q <= 0) return 0;
+        if (q <= 100) return 150;
+        if (q <= 200) return 180;
+        if (q < 500) return 200;
+        return 250; // 500 - 1000
+    }
+
+    let fullThousands = Math.floor(qty / 1000);
+    let remainder = qty % 1000;
+
+    let printCost = (fullThousands * 250) + printSlab(remainder);
+    let designCharge = baseDesignCharge;
+
+    // Double Side: print cost AND design charge both doubled
+    if (variantText.includes("double")) {
+        printCost = printCost * 2;
+        designCharge = designCharge * 2;
+    }
+
+    return Math.round((paperCost + designCharge + printCost) * job * 100) / 100;
+}
+
+function calculateItemTotal() {
+
+    let qty = parseFloat(qtyInput.value) || 0;
+
+    let price = parseFloat(priceInput.value) || 0;
+
+    let job =
+    parseFloat(
+        document.getElementById("itemJob").value
+    ) || 1;
+
+    let categoryName = "";
+
+    if (categorySelect.selectedIndex >= 0) {
+
+        categoryName =
+          categorySelect.options[
+            categorySelect.selectedIndex
+          ].text.toLowerCase();
+
+    }
+
+    let grossAmount = 0;
+
+    /* FIXED / SLAB ITEMS */
+    if (
+        categoryName.includes("banner") ||
+        categoryName.includes("poster") ||
+        categoryName.includes("letter pad") ||
+        categoryName.includes("printing") ||
+        categoryName.includes("invitation")
+    ) {
+
+        grossAmount = price * job;
+
+    }
+
+    /* NOTICE - fully custom JS pricing (flat paper rate + range-based print slab + design) */
+    else if (categoryName.includes("notice")) {
+
+        let sizeText = "";
+        if (sizeSelect.selectedIndex >= 0) {
+            sizeText = sizeSelect.options[sizeSelect.selectedIndex].text.toLowerCase();
+        }
+
+        let variantText = "";
+        if (variantSelect.selectedIndex >= 0) {
+            variantText = variantSelect.options[variantSelect.selectedIndex].text.toLowerCase();
+        }
+
+        grossAmount = calculateNoticePrice(qty, job, sizeText, variantText);
+        priceInput.value = grossAmount.toFixed(2);
+    }
+
+    /* BILL BOOK - fully custom JS pricing (paper + print + design + binding) */
+    else if (categoryName.includes("bill book")) {
+
+        let sizeText = "";
+        if (sizeSelect.selectedIndex >= 0) {
+            sizeText = sizeSelect.options[sizeSelect.selectedIndex].text.toLowerCase();
+        }
+
+        let variantText = "";
+        if (variantSelect.selectedIndex >= 0) {
+            variantText = variantSelect.options[variantSelect.selectedIndex].text.toLowerCase();
+        }
+
+        grossAmount = calculateBillBookPrice(qty, job, variantText, sizeText);
+        priceInput.value = grossAmount.toFixed(2);
+    }
+
+    /* NORMAL ITEMS */
+        /* TRAIN TICKET */
+    else if (
+        categoryName.includes("train ticket")
+    ) {
+
+        let sizeText = "";
+
+        if (sizeSelect.selectedIndex >= 0) {
+
+            sizeText =
+              sizeSelect.options[
+                sizeSelect.selectedIndex
+              ].text.toLowerCase();
+        }
+
+        let basePrice = 0;
+
+        if (sizeText.includes("minimum")) {
+
+            basePrice = 50;
+
+        } else if (sizeText.includes("thakkal")) {
+
+            basePrice = 75;
+
+        } else if (sizeText.includes("premium")) {
+
+            basePrice = 100;
+        }
+
+        grossAmount =
+          basePrice + ((qty - 1) * 20);
+
+        priceInput.value =
+          basePrice.toFixed(2);
+    }
+    /* ONLINE APPLICATION */
+else if (
+    categoryName.includes("online application")
+) {
+
+    let sizeText = "";
+
+    if (sizeSelect.selectedIndex >= 0) {
+
+        sizeText =
+          sizeSelect.options[
+            sizeSelect.selectedIndex
+          ].text.toLowerCase();
+    }
+
+    if (
+        sizeText.includes("patta") ||
+        sizeText.includes("chitta") ||
+        sizeText.includes("ec")
+    ) {
+
+        if (qty <= 3) {
+
+            grossAmount = 20;
+
+        } else {
+
+            grossAmount =
+              20 + ((qty - 3) * 5);
+        }
+
+        priceInput.value = "20.00";
+
+    } else {
+
+        grossAmount = qty * price * job;
+    }
+}
+/* PRINT OUT */
+else if (
+    categoryName.includes("print out")
+) {
+
+    let sizeText = "";
+
+    if (sizeSelect.selectedIndex >= 0) {
+
+        sizeText =
+          sizeSelect.options[
+            sizeSelect.selectedIndex
+          ].text.toLowerCase();
+    }
+
+    let variantText = "";
+
+    if (variantSelect.selectedIndex >= 0) {
+
+        variantText =
+          variantSelect.options[
+            variantSelect.selectedIndex
+          ].text.toLowerCase();
+    }
+
+    if (sizeText.includes("sticker")) {
+
+        grossAmount = qty * price * job;
+
+    }
+
+    else {
+
+    let isBlackSingle = variantText.includes("black s");
+
+    let isBlackDouble = variantText.includes("black d");
+
+    let isInkjetSingle = variantText.includes("color inkjet s");
+
+    let isInkjetDouble = variantText.includes("color inkjet d");
+
+    /*
+    A4 / LEGAL
+    */
+    if (
+        sizeText.includes("a4") ||
+        sizeText.includes("legal")
+    ) {
+
+        /* BLACK */
+        if (isBlackSingle) {
+
+            if (qty <= 10) {
+
+              grossAmount = 10 + ((qty - 1) * 3);
+              priceInput.value = (grossAmount).toFixed(2);
+            }
+
+            else if (qty <= 20) {
+
+                grossAmount = 37 + ((qty - 10) * 3);
+                priceInput.value = (grossAmount).toFixed(2);
+
+            }
+
+            else {
+
+                grossAmount = qty * price * job;
+            }
+        } else if (isBlackDouble) {
+
+            if (qty <= 10) {
+
+              grossAmount = 10 + ((qty - 1) * 4);
+              priceInput.value = (grossAmount).toFixed(2);
+            }
+
+            else if (qty <= 20) {
+
+                grossAmount = 46 + ((qty - 10) * 4);
+                priceInput.value = (grossAmount).toFixed(2);
+
+            }
+
+            else {
+
+                grossAmount = qty * price * job;
+            }
+        }
+
+
+        /* INKJET */
+        else if (isInkjetSingle) {
+
+            if (qty <= 10) {
+              grossAmount = 15 + ((qty - 1) * 10);
+              priceInput.value = (grossAmount).toFixed(2);
+            }
+
+            else {
+
+                grossAmount = qty * price * job;
+            }
+        }
+
+        else if (isInkjetDouble) {
+
+            if (qty <= 10) {
+                grossAmount = 25 + ((qty - 1) * 10);
+                priceInput.value = (grossAmount).toFixed(2);
+            }
+
+            else {
+
+                grossAmount = qty * price * job;
+            }
+        }
+
+        /* FALLBACK — e.g. Color Laser S/D or any other unlisted variant */
+        else {
+
+            grossAmount = qty * price * job;
+        }
+    }
+
+
+
+    else if (
+        sizeText.includes("a3")
+    ) {
+
+        if (isBlackSingle) {
+
+            if (qty <= 9) {
+                grossAmount = 15 + ((qty - 1) * 7);
+                priceInput.value = (grossAmount).toFixed(2);
+            }
+
+            else {
+
+                grossAmount = qty * price * job;
+            }
+        }
+
+        else if (isBlackDouble) {
+
+            if (qty <= 9) {
+
+                grossAmount = 20 + ((qty - 1) * 7);
+                priceInput.value = (grossAmount).toFixed(2);
+            }
+
+            else {
+
+                grossAmount = qty * price * job;
+            }
+        }
+
+        else {
+
+            grossAmount = qty * price * job;
+        }
+    }
+
+    /* FALLBACK — any size other than A4/Legal/A3 (e.g. 12x18) */
+    else {
+
+        grossAmount = qty * price * job;
+    }
+
+}
+}
+
+/* NORMAL ITEMS */
+else {
+
+    grossAmount = qty * price * job;
+}
+
+
+    totalInput.value = grossAmount.toFixed(2);
+
+}
+
+function clearItemFields() {
+
+    // Normal
+    document.getElementById("itemCategory").value = "";
+    document.getElementById("manualItemName").value = "";
+    document.getElementById("manualItemName").style.display = "none";
+    document.getElementById("itemSize").style.display = "";
+    document.getElementById("itemSize").innerHTML =
+        '<option value="">Select Size</option>';
+    document.getElementById("itemVariant").style.display = "";
+    document.getElementById("itemVariant").innerHTML =
+        '<option value="">Select Variant</option>';
+    document.getElementById("itemQty").value = "";
+    document.getElementById("itemJob").value = 1;
+
+    // Digital
+    document.getElementById("digitalCategory").value = "";
+    document.getElementById("digitalGsm").innerHTML =
+        '<option value="">Select GSM</option>';
+    document.getElementById("digitalProduct").innerHTML =
+        '<option value="">Select Product</option>';
+    document.getElementById("digitalLamination").innerHTML =
+        '<option value="">Select Lamination</option>';
+    document.getElementById("digitalSide").value = "";
+    document.getElementById("digitalDelivery").value = "";
+    document.getElementById("digitalQty").value = "";
+    document.getElementById("digitalJob").value = 1;
+
+    document.getElementById("itemPrice").readOnly = true;
+    document.getElementById("itemPrice").value = "";
+    document.getElementById("itemTotal").value = "";
+}
+
+document.querySelector("form").addEventListener("submit", function () {
+
+    document.getElementById("itemsJson").value =
+        JSON.stringify(orderItems);
+
+    console.log("SAVING:", orderItems);
+});
+
+</script>
+<script>
+document.querySelectorAll('input[type=number]').forEach(input => {
+
+    input.addEventListener('wheel', function(e) {
+        this.blur();
+    });
+
+});
+</script>
+
+<script>
+
+flatpickr("#quotationDate", {
+    dateFormat: "d-m-Y",
+    defaultDate: "today",
+    allowInput: true
+});
+
+flatpickr("#validUntil", {
+    dateFormat: "d-m-Y",
+    allowInput: true
+});
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,420 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Edit Digital Price</title>
+
+    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
+    <link rel="stylesheet" href="{% static 'pricing/edit_digital_price.css' %}">
+
+</head>
+<body>
+
+<div class="digital-page">
+
+    <div class="digital-header">
+
+        <h1>Edit Digital Price</h1>
+
+        <a href="{% url 'digital_price_table' %}"
+           class="back-btn">
+
+            ← Back
+
+        </a>
+
+    </div>
+
+    <div class="digital-card">
+
+        <form method="POST">
+
+            {% csrf_token %}
+
+            <div class="form-grid">
+
+                <!-- CATEGORY -->
+                <div class="form-group">
+
+                    <label>Category</label>
+
+                    <select name="category" required>
+
+                        {% for category in categories %}
+
+                        <option value="{{ category.id }}"
+                            {% if item.lamination.product.gsm.category.id == category.id %}
+                                selected
+                            {% endif %}>
+
+                            {{ category.name }}
+
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+                <!-- GSM -->
+                <div class="form-group">
+
+                    <label>GSM</label>
+
+                    <select name="gsm" required>
+
+                        {% for gsm in gsms %}
+
+                        <option value="{{ gsm.id }}"
+                            {% if item.lamination.product.gsm.id == gsm.id %}
+                                selected
+                            {% endif %}>
+
+                            {{ gsm.name }}
+
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+                <!-- PRODUCT -->
+                <!-- PRODUCT -->
+                <div class="form-group">
+
+                    <label>Product</label>
+
+                    <select id="productSelect" required>
+
+                        <option value="">
+                            Select Product
+                        </option>
+
+                        {% for product in products %}
+
+                        <option value="{{ product.id }}"
+                            data-gsm="{{ product.gsm.id }}"
+                            {% if item.lamination.product.id == product.id %}
+                                selected
+                            {% endif %}>
+
+                            {{ product.name }}
+
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+                <!-- LAMINATION -->
+                <div class="form-group">
+
+                    <label>Lamination</label>
+
+                    <select name="lamination" id="laminationSelect" required>
+
+                        <option value="">
+                            Select Lamination
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <!-- SIDE -->
+                <div class="form-group">
+
+                    <label>Side</label>
+
+                    <select name="side" id="sideSelect" required>
+
+                        <option value="">
+                            Select Side
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <!-- HIDDEN PRODUCT -->
+                <input type="hidden"
+                    name="product"
+                    id="finalProductId">
+
+                <!-- MIN QTY -->
+                <div class="form-group">
+
+                    <label>Min Qty</label>
+
+                    <input type="number"
+                           name="min_qty"
+                           value="{{ item.min_qty }}"
+                           required>
+
+                </div>
+
+                <!-- MAX QTY -->
+                <div class="form-group">
+
+                    <label>Max Qty</label>
+
+                    <input type="number"
+                           name="max_qty"
+                           value="{{ item.max_qty }}">
+
+                </div>
+
+                <!-- ONE DAY -->
+                <div class="form-group">
+
+                    <label>Delivery Type</label>
+
+                        <select name="delivery_type" required>
+
+                            {% for delivery in delivery_types %}
+
+                            <option value="{{ delivery.id }}"
+                                {% if item.delivery_type.id == delivery.id %}
+                                    selected
+                                {% endif %}
+                            >
+
+                                {{ delivery.name }}
+
+                            </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                </div>
+
+                <!-- SHOP -->
+                <div class="form-group">
+
+                    <label>Shop Rate</label>
+
+                    <input type="number"
+                           step="0.01"
+                           name="shop_rate"
+                           value="{{ item.shop_rate }}">
+
+                </div>
+
+                <!-- CUSTOMER -->
+                <div class="form-group">
+
+                    <label>Customer Rate</label>
+
+                    <input type="number"
+                           step="0.01"
+                           name="customer_rate"
+                           value="{{ item.customer_rate }}">
+
+                </div>
+
+                <!-- DISCOUNT -->
+                <div class="form-group">
+
+                    <label>Customer Discount %</label>
+
+                    <input type="number"
+                           step="0.01"
+                           name="customer_discount"
+                           value="{{ item.customer_discount }}">
+
+                </div>
+
+            </div>
+
+            <button type="submit"
+                    class="save-btn">
+
+                Update Price
+
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+<script>
+document.querySelectorAll('input[type=number]').forEach(input => {
+
+    input.addEventListener('wheel', function(e) {
+        this.blur();
+    });
+
+});
+</script>
+
+<script>
+
+const allProducts = [
+
+    {% for product in products %}
+
+    {
+        id: "{{ product.id }}",
+        name: "{{ product.name }}",
+        gsm: "{{ product.gsm.id }}"
+    },
+
+    {% endfor %}
+
+];
+
+const allLaminations = [
+
+    {% for product in products %}
+
+        {% for lamination in product.laminations.all %}
+
+        {
+            id: "{{ lamination.id }}",
+            name: "{{ lamination.name }}",
+            product: "{{ product.id }}"
+        },
+
+        {% endfor %}
+
+    {% endfor %}
+
+];
+
+const productSelect =
+    document.getElementById("productSelect");
+
+const laminationSelect =
+    document.getElementById("laminationSelect");
+
+const sideSelect =
+    document.getElementById("sideSelect");
+
+const finalProductId =
+    document.getElementById("finalProductId");
+
+
+// PRODUCT CHANGE
+// PRODUCT CHANGE
+productSelect.addEventListener("change", function () {
+
+    laminationSelect.innerHTML =
+        '<option value="">Select Lamination</option>';
+
+    sideSelect.innerHTML =
+        '<option value="">Select Side</option>';
+
+    const productId = this.value;
+
+    const laminations =
+        allLaminations.filter(
+            l => l.product === productId
+        );
+
+    laminations.forEach(lamination => {
+
+        laminationSelect.innerHTML += `
+            <option value="${lamination.id}">
+                ${lamination.name}
+            </option>
+        `;
+
+    });
+
+});
+
+
+// LAMINATION CHANGE
+laminationSelect.addEventListener("change", function () {
+
+    sideSelect.innerHTML = `
+    <option value="">Select Side</option>
+
+    <option value="single">
+        Single Side
+    </option>
+
+    <option value="double">
+        Double Side
+    </option>
+`;
+
+});
+
+
+// SIDE CHANGE
+sideSelect.addEventListener("change", function () {
+
+    finalProductId.value =
+        productSelect.value;
+
+});
+
+window.addEventListener("DOMContentLoaded", function () {
+
+    if (productSelect.value) {
+
+        productSelect.dispatchEvent(
+            new Event("change")
+        );
+
+        setTimeout(() => {
+
+            laminationSelect.value =
+                "{{ item.lamination.id }}";
+
+            laminationSelect.dispatchEvent(
+                new Event("change")
+            );
+
+            // sideSelect.innerHTML = `
+            //    <option value="">Select Side</option>
+            //    <option value="single">Single Side</option>
+            //    <option value="double">Double Side</option>
+           // `;
+
+          //  sideSelect.value =
+            //    "{{ item.side }}";
+
+            let currentSide =
+    "{{ item.side }}".toLowerCase();
+
+        if (
+            currentSide === "1 side" ||
+            currentSide === "1"
+        ) {
+            currentSide = "single";
+        }
+
+        else if (
+            currentSide === "2 side" ||
+            currentSide === "2"
+        ) {
+            currentSide = "double";
+        }
+
+        sideSelect.value = currentSide;
+
+        }, 100);
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>

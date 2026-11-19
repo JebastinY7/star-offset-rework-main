@@ -1,0 +1,35 @@
+/* Order History (builds on orderspage.css) */
+.ord-stats.three { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+.ord-stat.cancelled { --tone:#b91c1c; }
+
+.oh-export { display:inline-flex; align-items:center; gap:8px; height:42px; padding:0 18px; border-radius:9px; font-weight:600; white-space:nowrap; }
+.oh-export:hover:not(:disabled) { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 10%, #fff); }
+
+.oh-filters { row-gap:16px; }
+.oh-apply { height:42px; padding:0 24px; border-radius:9px; }
+.oh-apply:hover:not(:disabled) { filter:brightness(1.07); }
+.oh-quick { flex:1 1 100%; display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding-top:14px; border-top:1px solid #f0f1f4; }
+.oh-quick > span { margin-right:4px; font-size:13px; font-weight:600; color:#6b7280; }
+.oh-chip { padding:6px 15px; border-radius:999px; font-size:13.5px; font-weight:600; color:#374151; }
+.oh-chip:hover { border-color:var(--accent); }
+.oh-chip.on { background:var(--ink); border-color:var(--ink); color:var(--accent-light); }
+
+.oh-head-tools { display:flex; align-items:center; gap:14px; }
+.oh-refresh { padding:5px 12px; border-radius:8px; font-size:13.5px; font-weight:600; }
+.oh-spin { animation:oh-spin .8s linear infinite; }
+@keyframes oh-spin { to { transform:rotate(360deg); } }
+
+.oh .ord-table .act { width:auto; }
+.oh-items-text { display:block; max-width:340px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.oh-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
+.ord-reorder { cursor:pointer; background:color-mix(in srgb, var(--accent) 14%, #fff); border-color:color-mix(in srgb, var(--accent) 60%, #fff); color:var(--accent-dark); }
+.ord-reorder:hover:not(:disabled) { background:color-mix(in srgb, var(--accent) 26%, #fff); border-color:var(--accent); }
+
+@media (max-width:720px) {
+  .ord-stats.three { grid-template-columns:1fr; }
+  .oh-apply, .oh-export { width:100%; }
+  .oh .ord-table .c-act { text-align:left; }
+  .oh-actions { justify-content:stretch; }
+  .oh-actions > * { flex:1; justify-content:center; }
+  .oh-items-text { max-width:100%; white-space:normal; }
+}

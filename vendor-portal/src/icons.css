@@ -1,0 +1,20 @@
+/* SVG icon colours where the container did not set one */
+.icon svg { display:block; }
+
+/* coloured icons: every icon carries its own colour in --ico; a container can swap it for its own text colour with --ico-ctx */
+.icon-c svg { stroke:var(--ico-ctx, var(--ico)); }
+.icon-c.tint svg { fill:color-mix(in srgb, var(--ico-ctx, var(--ico)) 16%, transparent); }
+/* WhatsApp / Email icons are not recoloured in the vendor portal - they keep following the tile colour */
+.icon:not(.icon-c) { color:var(--accent); }
+
+/* places that already have their own colour (tinted tiles, solid buttons, active menu item) - the icon follows it */
+[class*="-ico"],
+.primary, .btn-dark, .aw-btn.accent, .aw-btn.danger, .aw-btn.dark, .aw-view.accent,
+.sb-nav a.active, .pr-tabs button.on, .aw-pager button.on, .tb-clear:hover { --ico-ctx:currentColor; }
+
+.sp-way-ico { color:var(--accent); }
+.sp-faq-group h3 .icon { color:var(--accent); }
+.sp-way-ico.phone { background:#e8f0fe; color:#2563eb; }
+.sp-way-ico.whatsapp { background:#e3f8ea; color:#16a34a; }
+.sp-way-ico.mail { background:#fdeee3; color:#ea580c; }
+.sp-way:hover { background:#fafcff; }

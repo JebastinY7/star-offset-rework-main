@@ -1,0 +1,62 @@
+/* Vendor Portal > Price Requests */
+.pr { display:flex; flex-direction:column; gap:20px; }
+.pr-tabs { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.pr-tabs button { display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 16px; border-radius:999px; border:1px solid var(--line); background:#fff; font-weight:600; }
+.pr-tabs button em { font-style:normal; font-size:12px; padding:1px 8px; border-radius:999px; background:#eef2f7; color:#475569; }
+.pr-tabs button.on { background:var(--dark); border-color:var(--dark); color:#fff; } .pr-tabs button.on em { background:var(--accent); color:#fff; }
+.pr-hint { margin-left:6px; color:var(--amber); font-weight:600; font-size:13.5px; }
+.pr-list { display:flex; flex-direction:column; gap:16px; }
+
+.pr-card { background:#fff; border:1px solid var(--line); border-left:4px solid var(--amber); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; gap:14px; }
+.pr-card.quoted { border-left-color:var(--blue); }
+.pr-card.countered { border-left-color:#7c3aed; }
+.pr-card.declined, .pr-card.not_selected { border-left-color:#cbd5e1; background:#fafbfd; }
+.pr-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.pr-head b { font-size:17px; margin-right:10px; } .pr-head span:not(.vchip) { color:var(--muted); font-size:13.5px; }
+.pr-meta { display:flex; flex-wrap:wrap; gap:8px 22px; color:#475569; font-size:13.5px; }
+.pr-meta span { display:inline-flex; align-items:center; gap:6px; }
+
+.pr-lines { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+.pr-lines li { padding:11px 13px; border-radius:10px; background:#f5f7fb; border:1px solid #e8edf4; }
+.pr-line-top { display:flex; justify-content:space-between; gap:12px; }
+.pr-specs { display:flex; flex-wrap:wrap; gap:6px; margin-top:7px; }
+.pr-specs span { padding:3px 9px; border-radius:7px; background:#fff; border:1px solid var(--line); font-size:12.5px; color:#475569; }
+.pr-specs span b { color:var(--ink); font-weight:600; }
+
+.pr-msg { display:flex; gap:10px; padding:11px 13px; border-radius:10px; background:var(--accent-l); color:#1e3a8a; }
+.pr-msg small { display:block; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:2px; } .pr-msg p { margin:0; white-space:pre-wrap; }
+
+.pr-form { display:flex; flex-direction:column; gap:12px; padding-top:14px; border-top:1px dashed var(--line); }
+.pr-grid { display:grid; grid-template-columns:minmax(220px, 1fr) 1.4fr; gap:16px; align-items:start; }
+.pr-form .field { display:flex; flex-direction:column; gap:6px; }
+.pr-form .field label { font-weight:600; font-size:13.5px; }
+.pr-form input, .pr-form textarea { width:100%; padding:11px 13px; border:1.5px solid var(--line); border-radius:10px; background:#fff; outline:none; font:inherit; }
+.pr-form input { font-weight:700; font-size:17px; font-variant-numeric:tabular-nums; }
+.pr-form input:focus, .pr-form textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.18); }
+.pr-per { color:var(--muted); font-size:12.5px; }
+.pr-state { display:flex; align-items:center; gap:8px; margin:0; padding:9px 12px; border-radius:10px; background:#e8f0fe; color:#1d4ed8; font-size:13.5px; }
+.pr-warn { margin:0; padding:9px 12px; border-radius:10px; background:#fffbeb; color:#92400e; font-size:13.5px; }
+.pr-actions { display:flex; justify-content:flex-end; gap:12px; flex-wrap:wrap; }
+.aw-btn.danger { background:#dc2626; border-color:#dc2626; color:#fff; } .aw-btn.danger:hover { background:#b91c1c; border-color:#b91c1c; }
+.aw-btn:disabled { opacity:.6; cursor:default; }
+.pr-closed p { margin:0 0 4px; }
+
+.vchip.enquiry { background:#fef3c7; color:#92400e; } .vchip.quoted { background:#d9e6fb; color:#1d4ed8; }
+.vchip.countered { background:#ede9fe; color:#5b21b6; }
+.vchip.declined { background:#fee2e2; color:#991b1b; } .vchip.not_selected { background:#e2e8f0; color:#334155; }
+/* counter offer from Star Offset + price history */
+.pr-offer { display:flex; flex-direction:column; gap:10px; padding:14px 16px; border-radius:12px; background:#f5f3ff; border:1px solid #ddd6fe; }
+.pr-offer-top { display:flex; gap:10px; align-items:flex-start; color:#5b21b6; }
+.pr-offer-top small { display:block; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+.pr-offer-top b { display:block; font-size:24px; font-variant-numeric:tabular-nums; color:#4c1d95; }
+.pr-offer-top span { color:#6d28d9; font-size:13px; }
+.pr-offer-was, .pr-offer-note { margin:0; font-size:13.5px; color:#4c1d95; }
+.pr-offer-note { display:flex; gap:8px; align-items:flex-start; white-space:pre-wrap; }
+.pr-offer-acts { display:flex; align-items:center; gap:12px; flex-wrap:wrap; } .pr-offer-acts span { color:var(--muted); font-size:13px; }
+.pr-neg { padding:10px 14px; border-radius:10px; background:#f8fafc; border:1px solid var(--line); }
+.pr-neg small { display:block; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:6px; }
+.pr-neg ol { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+.pr-neg li { display:flex; flex-wrap:wrap; gap:4px 12px; align-items:baseline; font-size:13.5px; padding-left:12px; border-left:3px solid #93c5fd; }
+.pr-neg li.admin { border-left-color:#a78bfa; }
+.pr-neg li em { font-style:normal; color:var(--muted); font-size:12.5px; } .pr-neg li p { flex-basis:100%; margin:0; color:#475569; font-size:13px; }
+@media (max-width:760px) { .pr-grid { grid-template-columns:1fr; } .pr-actions .aw-btn { flex:1; justify-content:center; } }

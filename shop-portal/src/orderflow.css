@@ -1,0 +1,60 @@
+/* Place an Order + Order Cart */
+.sr-only { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); border:0; }
+
+/* Place an Order */
+.pf-grid { display:grid; grid-template-columns:minmax(0, 1fr) 300px; gap:18px; align-items:start; }
+.pf-main { display:flex; flex-direction:column; gap:16px; max-width:720px; }
+.pf-step h2, .pf-h { display:flex; align-items:center; gap:10px; margin:0 0 12px; font-size:17px; }
+.pf-h { margin:4px 0 -4px; }
+.pf-step select { width:100%; }
+.pf-step p { margin:10px 0 0; }
+.step-no { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%; background:var(--ink); color:var(--accent-light); font-size:13px; font-weight:700; flex-shrink:0; }
+.pf-main .estimate { margin-top:0; }
+.pf-add { display:flex; flex-direction:column; gap:8px; }
+.pf-added { margin:0 0 16px; display:flex; align-items:center; gap:8px; }
+.pf-aside { position:sticky; top:calc(var(--topbar-h) + 16px); display:flex; flex-direction:column; gap:12px; }
+.pf-aside h3 { margin:0; font-size:17px; } .pf-aside p { margin:0; }
+.pf-aside .btn-link { display:block; }
+.mini-items { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+.mini-items li { display:flex; flex-direction:column; gap:2px; padding-bottom:10px; border-bottom:1px solid #f0f0f0; font-size:14.5px; }
+.mini-items li:last-child { border-bottom:0; padding-bottom:0; }
+
+/* artwork picker */
+.artwork { display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+.file-drop { display:inline-flex; align-items:center; gap:8px; padding:9px 16px; border:1.5px dashed #c9ced6; border-radius:8px; background:#f9fafb; font-weight:600; font-size:14.5px; cursor:pointer; }
+.file-drop:hover { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 8%, #fff); }
+.file-drop:focus-within { outline:2px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+.artwork .alert { margin:0; }
+.file-list { list-style:none; margin:0; padding:0; width:100%; display:flex; flex-direction:column; border:1px solid #e5e7eb; border-radius:8px; }
+.file-list li { display:flex; align-items:center; gap:12px; padding:8px 12px; border-bottom:1px solid #f0f0f0; font-size:14px; }
+.file-list li:last-child { border-bottom:0; }
+.file-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Order Cart */
+.oc-item { display:flex; flex-direction:column; gap:14px; }
+.oc-top { display:flex; justify-content:space-between; gap:16px; }
+.oc-files { border-top:1px solid #f0f0f0; padding-top:12px; }
+.oc-files h4 { margin:0 0 8px; font-size:14px; color:#374151; }
+.cart-summary .field { gap:5px; }
+.of-textarea { width:100%; resize:vertical; padding:9px 11px; border:1px solid #d1d5db; border-radius:6px; font:inherit; }
+.of-textarea:focus { outline:2px solid color-mix(in srgb, var(--accent) 45%, transparent); border-color:var(--accent); }
+.done-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+
+@media (max-width:900px) { .pf-grid { grid-template-columns:1fr; } .pf-aside { position:static; } }
+@media (max-width:520px) { .oc-top { flex-direction:column; } }
+
+
+/* DTP preferences: consistent label/control alignment on order and price pages */
+.dtp-preferences { display:flex; flex-direction:column; gap:12px; }
+.dtp-preferences h3 { margin:0; font-size:17px; }
+.dtp-preferences > p { margin:0 !important; }
+.dtp-fields { display:grid; grid-template-columns:1fr; gap:12px; }
+.dtp-field { display:grid; grid-template-columns:minmax(150px, 190px) minmax(0, 1fr); gap:14px; align-items:center; }
+.dtp-field label { color:#374151; font-size:14px; font-weight:600; }
+.dtp-field label span { color:#dc2626; }
+.dtp-field input, .dtp-field textarea { width:100%; min-width:0; box-sizing:border-box; }
+.dtp-field textarea { min-height:84px; resize:vertical; padding:10px 12px; border:1px solid #d1d5db; border-radius:7px; font:inherit; }
+.dtp-field-notes { align-items:start; }
+.dtp-field-notes label { padding-top:10px; }
+.dtp-price-preferences { margin:16px 0; }
+@media (max-width:600px) { .dtp-field { grid-template-columns:1fr; gap:6px; } .dtp-field-notes label { padding-top:0; } }

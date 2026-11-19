@@ -1,0 +1,56 @@
+/* Update Work Progress dialog + In Progress page */
+.up-modal { position:fixed; inset:0; z-index:60; display:grid; place-items:center; padding:16px; background:rgba(8,20,45,.55); }
+.up-dialog { width:100%; max-width:860px; max-height:100%; display:flex; flex-direction:column; background:#fff; border-radius:16px; box-shadow:0 24px 60px rgba(0,0,0,.35); overflow:hidden; }
+.up-head { display:flex; align-items:center; justify-content:space-between; padding:20px 28px; border-bottom:1px solid var(--line); }
+.up-head h2 { font-size:21px; letter-spacing:-.01em; }
+.up-head button { border:0; background:none; padding:6px; border-radius:8px; color:#1e293b; display:grid; } .up-head button:hover { background:#f1f5f9; }
+
+
+.up-body { padding:18px 28px 6px; overflow:auto; }
+.up-err { margin-bottom:14px; }
+.up-grid { display:grid; grid-template-columns:minmax(0, 1fr) 270px; gap:22px; align-items:start; }
+.up-form { display:grid; grid-template-columns:1fr 1fr; gap:16px 18px; }
+.up-form .wide { grid-column:1 / -1; }
+.up-form .field input, .up-form .field textarea { width:100%; padding:11px 14px; border:1.5px solid #d3dce8; border-radius:10px; background:#fff; outline:none; }
+.up-form .field input { height:46px; } .up-form .field textarea { resize:vertical; min-height:96px; }
+.up-form .field input:focus, .up-form .field textarea:focus, .up-form .aw-select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.18); }
+.up-form .aw-select { height:46px; }
+.up-form .ro { background:#eef2f7; font-weight:600; color:#1e293b; }
+.req { color:var(--accent); font-weight:700; }
+
+.up-quick { padding:18px; border-radius:14px; background:#f3f7ff; display:flex; flex-direction:column; gap:10px; }
+.up-quick h3 { font-size:15.5px; margin-bottom:4px; }
+.up-quick button { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid #d9e6fb; border-radius:10px; background:#fff; text-align:left; font-weight:500; color:#94a3b8; }
+.up-quick button span { flex:1; color:var(--ink); } .up-quick button .icon:first-child { color:var(--ink); }
+.up-quick button:hover { border-color:var(--accent); }
+.up-quick button.on { background:#dbe9fe; border-color:var(--accent); }
+
+.up-sum { display:flex; flex-direction:column; gap:14px; margin-top:20px; padding:16px 18px; border-radius:12px; background:#f8fafc; border:1px solid var(--line); }
+.up-bar { display:flex; height:22px; border-radius:999px; background:#e2e8f0; overflow:hidden; }
+.up-bar .b1 { background:var(--accent); } .up-bar .b2 { background:#93b4f5; }
+.up-legend { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:12px 28px; }
+.up-legend li { display:flex; align-items:center; gap:8px; } .up-legend b { margin-left:4px; }
+.up-legend i { width:12px; height:12px; border-radius:50%; background:#e2e8f0; } .up-legend i.b1 { background:var(--accent); } .up-legend i.b2 { background:#93b4f5; }
+.alert.warn { background:#fef3c7; color:#92400e; }
+
+
+.up-foot { display:flex; justify-content:flex-end; gap:12px; padding:16px 28px 22px; }
+.up-foot .aw-btn { min-width:110px; justify-content:center; } .up-foot .left { margin-right:auto; }
+
+@media (max-width:760px) {
+    .up-grid { grid-template-columns:1fr; } .up-form { grid-template-columns:1fr; } .up-quick { order:-1; }
+  }
+
+/* In Progress page */
+.aw-filters.three { grid-template-columns:2.2fr 1.4fr 1.4fr auto; }
+.aw-filters.three .aw-actions { grid-column:auto; }
+.ip-prog { min-width:150px; display:flex; flex-direction:column; gap:5px; }
+.ip-prog small { color:var(--muted); font-size:12px; }
+.ip-bar { height:7px; border-radius:999px; background:#e2e8f0; overflow:hidden; } .ip-bar span { display:block; height:100%; background:var(--accent); border-radius:999px; }
+.ip-actions { display:flex; gap:8px; }
+.aw-view.accent { background:var(--accent); } .aw-view.accent:hover { background:var(--accent-d); color:#fff; }
+.aw-view { border:0; cursor:pointer; }
+@media (max-width:1100px) { .aw-filters.three { grid-template-columns:1fr 1fr; } .aw-filters.three .aw-actions { grid-column:1 / -1; } }
+@media (max-width:600px) { .aw-filters.three { grid-template-columns:1fr; } }
+
+.up-form label small { font-weight:500; color:#667085; margin-left:2px; }
