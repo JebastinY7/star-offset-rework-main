@@ -30,9 +30,11 @@ from rest_framework.response import Response
 
 from pricing.models import (DeliveryType, DigitalCategory, DigitalGSM, DigitalLamination,
                             DigitalPrice, DigitalProduct, Category, PriceRule, Size, Variant)
-from pricing.code_prices import get_price_rule as get_code_price_rule, get_latest_price_rule
+from pricing.code_prices import (get_price_rule as get_code_price_rule, get_latest_price_rule,
+                                  get_price_rules)
 
 from .billing_service import BillingError, save_bill_core
+from .paper_prices import get_paper_rates
 from .models import (Bill, Customer, MembershipTransaction, OffersHistory, Order, OrderItem,
                      PointTransaction, Quotation, QuotationItem, Setting, StaffActivity,
                      WhatsappMessage, user_role)
@@ -313,19 +315,70 @@ def billing_sizes(request):
     cid = request.query_params.get("category_id")
     if not cid or cid == "None":
         return Response({"sizes": []})
-    return Response({"sizes": list(Size.objects.filter(category_id=cid).values("id", "name"))})
+
+    category = Category.objects.filter(pk=cid).first()
+    if category and "bill book" in (category.name or "").casefold():
+        # Bill Book supports exactly these four sizes. Do not expose legacy or
+        # code-rule entries such as A5/2 in the invoice dropdown.
+        allowed_sizes = ["A4", "A5", "A6", "LEGAL"]
+        for size_name in allowed_sizes:
+            Size.objects.get_or_create(category=category, name=size_name)
+        sizes = Size.objects.filter(category=category, name__in=allowed_sizes)
+        size_order = {name: index for index, name in enumerate(allowed_sizes)}
+        return Response({
+            "sizes": sorted(
+                list(sizes.values("id", "name")),
+                key=lambda item: size_order.get(item["name"].upper(), 99),
+            )
+        })
+
+    sizes = Size.objects.filter(category_id=cid).order_by("id")
+    return Response({"sizes": list(sizes.values("id", "name"))})
 
 
 @api_view(["GET"])
 def billing_variants(request):
     sid = request.query_params.get("size_id")
-    qs = Variant.objects.filter(size_id=sid)
     size = Size.objects.select_related("category").filter(pk=sid).first() if sid else None
+    qs = Variant.objects.filter(size_id=sid)
 
-    # Bill Book customers/staff should only see duplicate-print options.
-    # Keep the actual database names/IDs so existing pricing calculations continue to work.
-    if size and "bill book" in (size.category.name or "").lower():
-        qs = qs.filter(name__iregex=r"^dupl\.?\s*(low\s*)?print$")
+    if size and "bill book" in (size.category.name or "").casefold():
+        # Return exactly the two supported duplicate-print choices for the
+        # selected Bill Book size. Do not aggregate rules across all sizes:
+        # A4/A5 use 50p-30p names, Legal uses 70p-50p names, and A6 has no
+        # code-price rows, so it uses the A4-compatible names for the shop
+        # formula (which identifies the low option from the word "Low").
+        size_name = (size.name or "").strip().casefold()
+        prefix = "70p-50p" if size_name == "legal" else "50p-30p"
+        canonical_names = (
+            f"({prefix}) Print",
+            f"({prefix}) Low Print",
+        )
+
+        result = []
+        for order, canonical_name in enumerate(canonical_names):
+            # Reuse one exact size-specific row if it already exists. Older
+            # duplicate/legacy variants are deliberately not returned.
+            variant_obj = Variant.objects.filter(
+                size=size, name__iexact=canonical_name
+            ).order_by("id").first()
+            if variant_obj is None:
+                variant_obj = Variant.objects.create(
+                    size=size,
+                    name=canonical_name,
+                    display_order=order,
+                )
+            elif variant_obj.display_order != order:
+                variant_obj.display_order = order
+                variant_obj.save(update_fields=["display_order"])
+
+            result.append({
+                "id": variant_obj.id,
+                "name": "Dupl. Low Print" if "low" in canonical_name.casefold() else "Dupl. Print",
+            })
+
+        return Response({"variants": result})
+
     qs = qs.order_by("display_order", "name")
     return Response({"variants": list(qs.values("id", "name"))})
 
@@ -354,6 +407,8 @@ def billing_price(request):
         "shop_discount": float(latest.shop_discount or 0) if latest else 0,
         "cs_discount": float(latest.cs_discount or 0) if latest else 0,
         "notes": (rule.notes or "") if rule else "",
+        # Paper price per sheet (Settings > Paper Price) - the Bill Book / Notice preview uses these
+        "paper_rates": get_paper_rates(),
     }
 
     # Shop customers use the same final, no-discount rates as the Shop Portal,

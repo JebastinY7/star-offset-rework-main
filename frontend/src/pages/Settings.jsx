@@ -16,6 +16,7 @@ const ROLES = [["admin", "Admin"], ["manager", "Manager"], ["staff", "Staff"]];
 const ROLE_LABEL = Object.fromEntries(ROLES);
 const SECTIONS = [
   ["membership", "Membership", "card"],
+  ["paper", "Paper Price", "tag"],
   ["staff", "Staff & Roles", "users"],
   ["shops", "Shop Management", "store"],
   ["vendors", "Vendor Management", "printer"],
@@ -123,6 +124,70 @@ function MembershipPanel() {
               </div>
             </label>
           </div>
+          <div className="st-actions">
+            <button type="button" disabled={!dirty || busy} onClick={() => { setF(saved); clear(); }}>Reset</button>
+            <button className="primary" disabled={!dirty || busy}>{busy ? "Saving…" : "Save Changes"}</button>
+          </div>
+        </form>
+      )}
+    </Panel>
+  );
+}
+
+/* ------------------------------------------------------------ Paper Price */
+// Price per sheet. Bill Book and Notice prices are worked out from these, so when the paper
+// market rate changes the admin just types the new rate here (no code change).
+const PAPER_FIELDS = [
+  ["standard_original", "Original Paper Price (A4)", "Bill Book original paper and Notice paper, per sheet."],
+  ["duplicate", "Duplicate Paper Price (A4)", "Bill Book duplicate paper, per sheet. Added to the original price for Duplicate bill books."],
+  ["low_original", "Low Original Paper Price (A4)", "Original paper for Low Print bill books, per sheet."],
+  ["legal_original", "Legal Original Paper Price", "Legal size original paper, per sheet."],
+  ["legal_duplicate", "Legal Duplicate Paper Price", "Legal size duplicate paper, per sheet."],
+];
+
+function PaperPricePanel() {
+  const [saved, setSaved] = useState(null);
+  const [f, setF] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [flash, ok, fail, clear] = useFlash();
+
+  useEffect(() => {
+    api.get("/settings/paper-prices/").then((r) => { setSaved(r.data); setF(r.data); }).catch(fail);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const dirty = f && saved && PAPER_FIELDS.some(([k]) => String(f[k]) !== String(saved[k]));
+
+  const save = async (e) => {
+    e.preventDefault();
+    clear(); setBusy(true);
+    try {
+      const r = await api.patch("/settings/paper-prices/", f);
+      setSaved(r.data); setF(r.data);
+      ok("Paper prices updated");
+    } catch (err) { fail(err); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <Panel title="Paper Price" subtitle="Enter the current paper price per sheet. New bills, orders and quotations use these prices.">
+      <Flash flash={flash} />
+      {!f ? <p className="muted">Loading…</p> : (
+        <form className="st-form" onSubmit={save}>
+          <div className="st-grid2">
+            {PAPER_FIELDS.map(([key, label, hint]) => (
+              <label key={key}>
+                <span className="lbl">{label}</span>
+                <div className="st-affix">
+                  <span className="pre">₹</span>
+                  <input type="number" min="0" step="any" value={f[key]} onChange={set(key)} onWheel={noWheel} required />
+                </div>
+                <p className="st-hint">{hint}</p>
+              </label>
+            ))}
+          </div>
+          <p className="st-hint">A5 uses half and A6 a quarter of the A4 price automatically. Bills and orders already saved are not changed.</p>
           <div className="st-actions">
             <button type="button" disabled={!dirty || busy} onClick={() => { setF(saved); clear(); }}>Reset</button>
             <button className="primary" disabled={!dirty || busy}>{busy ? "Saving…" : "Save Changes"}</button>
@@ -633,7 +698,7 @@ export default function Settings() {
     <>
       <div className="st-head">
         <h1>Settings</h1>
-        <p className="muted">Configure memberships, staff accounts, shops, vendors and your security.</p>
+        <p className="muted">Configure memberships, paper prices, staff accounts, shops, vendors and your security.</p>
       </div>
       <div className="st-layout">
         <nav className="card st-menu" aria-label="Settings menu">
@@ -646,6 +711,7 @@ export default function Settings() {
         </nav>
         <div>
           {tab === "membership" && <MembershipPanel />}
+          {tab === "paper" && <PaperPricePanel />}
           {tab === "staff" && <StaffPanel />}
           {tab === "shops" && <ShopsPanel Panel={Panel} Flash={Flash} useFlash={useFlash} PasswordInput={PasswordInput} />}
           {tab === "vendors" && <VendorsPanel Panel={Panel} Flash={Flash} useFlash={useFlash} PasswordInput={PasswordInput} />}
