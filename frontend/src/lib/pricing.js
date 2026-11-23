@@ -9,6 +9,28 @@ export function customRound(amount) {
   return amount - whole < 0.5 ? whole : whole + 1;
 }
 
+/* ---------------- PAPER PRICE ----------------
+   Paper price per sheet is typed in Settings > Paper Price and arrives from the server in
+   dbData.paper_rates (GET /billing/price/). These numbers are only a fallback for when the
+   server did not send any (old response / offline), so a bill is never priced with NaN. */
+export const DEFAULT_PAPER_RATES = {
+  standard_original: 0.42, // A4 original paper
+  low_original: 0.35,      // A4 original paper, "low" print
+  duplicate: 0.3,          // A4 duplicate paper
+  legal_original: 0.6,     // Legal original paper
+  legal_duplicate: 0.4,    // Legal duplicate paper
+};
+
+// Use the server value for every key; anything missing / not a positive number falls back to the default
+export function resolvePaperRates(rates) {
+  const out = { ...DEFAULT_PAPER_RATES };
+  for (const k of Object.keys(out)) {
+    const n = parseFloat(rates?.[k]);
+    if (Number.isFinite(n) && n > 0) out[k] = n;
+  }
+  return out;
+}
+
 /* ---------------- BILL BOOK ---------------- */
 export function billBookRoundOff(amount) {
   const rounded = Math.round(amount);
@@ -34,7 +56,8 @@ export function billBookPrintCost(totalPapers, isLegal, isA5, isA6) {
   return Math.round((last[1] + extraSteps * ratePer1000) * 100) / 100;
 }
 
-export function calculateBillBookPrice(qty, job, variantText, sizeText) {
+export function calculateBillBookPrice(qty, job, variantText, sizeText, paperRates) {
+  const rates = resolvePaperRates(paperRates);
   qty = parseFloat(qty) || 0;
   job = parseFloat(job) || 1;
   variantText = (variantText || "").toLowerCase();
@@ -48,10 +71,10 @@ export function calculateBillBookPrice(qty, job, variantText, sizeText) {
 
   let originalRate, duplicateRate, designChargeAmount;
   if (isLegal) {
-    originalRate = 0.6; duplicateRate = 0.4; designChargeAmount = 200;
+    originalRate = rates.legal_original; duplicateRate = rates.legal_duplicate; designChargeAmount = 200;
   } else {
-    const baseOriginal = variantText.includes("low") ? 0.35 : 0.42;
-    const baseDuplicate = 0.3;
+    const baseOriginal = variantText.includes("low") ? rates.low_original : rates.standard_original;
+    const baseDuplicate = rates.duplicate;
     if (isA5) { originalRate = baseOriginal / 2; duplicateRate = baseDuplicate / 2; designChargeAmount = 100; }
     else if (isA6) { originalRate = baseOriginal / 4; duplicateRate = baseDuplicate / 4; designChargeAmount = 100; }
     else { originalRate = baseOriginal; duplicateRate = baseDuplicate; designChargeAmount = 150; }
@@ -74,7 +97,8 @@ export function calculateBillBookPrice(qty, job, variantText, sizeText) {
 }
 
 /* ---------------- NOTICE ---------------- */
-export function calculateNoticePrice(qty, job, sizeText, variantText) {
+export function calculateNoticePrice(qty, job, sizeText, variantText, paperRates) {
+  const rates = resolvePaperRates(paperRates);
   qty = parseFloat(qty) || 0;
   job = parseFloat(job) || 1;
   sizeText = (sizeText || "").toLowerCase();
@@ -83,7 +107,8 @@ export function calculateNoticePrice(qty, job, sizeText, variantText) {
   const isLegal = sizeText.includes("legal") || sizeText.includes("lgl");
   const isA5 = sizeText.includes("a5");
 
-  const paperRate = isLegal ? 0.6 : isA5 ? 0.21 : 0.42;
+  // Notice paper = the original paper price (A5 is half of A4)
+  const paperRate = isLegal ? rates.legal_original : isA5 ? rates.standard_original / 2 : rates.standard_original;
   const paperCost = Math.round(qty * paperRate * 100) / 100;
   let designCharge = qty > 0 ? (isLegal ? 200 : isA5 ? 100 : 150) : 0;
 
@@ -97,7 +122,7 @@ export function calculateNoticePrice(qty, job, sizeText, variantText) {
 /* ---------------- NORMAL PRINT: gross amount ----------------
    category / size / variant are lower-cased names, dbPrice is the
    per-unit price from the price table. Returns {gross, price}. */
-export function normalGross({ category, size, variant, qty, job, dbPrice }) {
+export function normalGross({ category, size, variant, qty, job, dbPrice, paperRates }) {
   let price = dbPrice;
   let gross = 0;
   const has = (s, t) => s.includes(t);
@@ -105,10 +130,10 @@ export function normalGross({ category, size, variant, qty, job, dbPrice }) {
   if (["banner", "poster", "letter pad", "printing", "invitation"].some((t) => has(category, t))) {
     gross = price * job;
   } else if (has(category, "notice")) {
-    gross = calculateNoticePrice(qty, job, size, variant);
+    gross = calculateNoticePrice(qty, job, size, variant, paperRates);
     price = gross;
   } else if (has(category, "bill book")) {
-    gross = calculateBillBookPrice(qty, job, variant, size);
+    gross = calculateBillBookPrice(qty, job, variant, size, paperRates);
     price = gross;
   } else if (has(category, "train ticket")) {
     if (has(size, "minimum")) gross = 50 + (qty - 1) * 20;
@@ -188,7 +213,7 @@ export function previewNormal({ category, size, variant, qty, job, extraCharge, 
 
   if (dbPrice <= 0 && !FORMULA_CATEGORIES.some((t) => category.includes(t))) return null;
 
-  const { gross, price } = normalGross({ category, size, variant, qty, job, dbPrice });
+  const { gross, price } = normalGross({ category, size, variant, qty, job, dbPrice, paperRates: dbData.paper_rates });
   const pct = discountPercent({
     category, qty, customerType,
     shopDiscount: parseFloat(dbData.shop_discount || 0),

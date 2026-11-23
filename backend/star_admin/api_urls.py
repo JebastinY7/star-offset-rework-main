@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from . import activity_api, api_views, auth_api, live_api, membership_api, messages_api, notifications_api, offers_api, pnl_api, push_api, reports_api, settings_api, shop_my_orders_api, shop_logo_api, shop_orders_api, shop_password_api, shop_portal_api, shop_invoice_api, shop_pricing_api, shop_profile_api, shop_recovery_api, shop_support_api, shop_requests_api, shops_api, shop_orders_admin_api, shop_payments_api, vendor_portal_api, vendor_recovery_api, vendor_support_api, vendors_admin_api, wallet_api
+from . import activity_api, api_views, auth_api, live_api, membership_api, messages_api, notifications_api, offers_api, paper_price_api, pnl_api, push_api, reports_api, settings_api, shop_my_orders_api, shop_logo_api, shop_orders_api, shop_password_api, shop_portal_api, shop_invoice_api, shop_pricing_api, shop_profile_api, shop_recovery_api, shop_support_api, shop_requests_api, shops_api, shop_orders_admin_api, shop_payments_api, vendor_portal_api, vendor_recovery_api, vendor_support_api, vendors_admin_api, wallet_api
 
 router = DefaultRouter()
 router.register("customers", api_views.CustomerViewSet, basename="api-customers")
@@ -72,6 +72,7 @@ urlpatterns = [
     path("reports/<str:kind>/export/", reports_api.report_export),
     # settings (admin only)
     path("settings/membership/", api_views.settings_membership),
+    path("settings/paper-prices/", paper_price_api.settings_paper_prices),
     path("settings/admin-password/", api_views.settings_admin_password),
     path("settings/staff/", settings_api.settings_staff),
     path("settings/staff/<int:pk>/", settings_api.settings_staff_detail),

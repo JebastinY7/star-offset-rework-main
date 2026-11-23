@@ -19,11 +19,12 @@ from rest_framework.response import Response
 
 from pricing.models import Category, DigitalCategory, DigitalLamination, DigitalPrice, PriceRule, Size, Variant
 from pricing.code_prices import (
-    BILL_BOOK_PRINT_COST_TABLES, BILL_BOOK_PAPER_RATES,
+    BILL_BOOK_PRINT_COST_TABLES,
     BILL_BOOK_DESIGN_CHARGES, BILL_BOOK_BINDING_SLABS,
 )
 from pricing.code_prices import iter_price_rules, get_price_rule as get_code_price_rule, get_latest_price_rule, get_price_rules
 
+from .paper_prices import get_paper_rates
 from .shop_portal_api import IsShopUser
 
 MAX_QTY = 1_000_000
@@ -127,17 +128,24 @@ def _is_formula(category_name):
 
 # ----------------------------------------------------------------- formulas (port of pricing.js)
 def _bill_book_print_cost(total_papers, is_legal, is_a5, is_a6):
-    table_key = "legal" if is_legal else "a5" if is_a5 else "a6" if is_a6 else "a4"
-    table = BILL_BOOK_PRINT_COST_TABLES[table_key]
+    """Shop Bill Book printing charge, using the same slabs for every size.
+
+    The A4 shop printing rates apply equally to A4, A5, A6 and Legal.
+    Paper rates remain size-specific in _bill_book_price. Above 1,000 pages,
+    charges repeat additively in 1,000-page blocks (e.g. 1,500 = 1,000 + 500).
+    """
     if total_papers <= 0:
         return 0
-    for limit, cost in table:
-        if total_papers <= limit:
-            return cost
-    last, prev = table[-1], table[-2]
-    rate_per_1000 = (last[1] - prev[1]) / ((last[0] - prev[0]) / 1000)
-    extra_steps = math.ceil((total_papers - last[0]) / 1000)
-    return js_round((last[1] + extra_steps * rate_per_1000) * 100) / 100
+
+    slabs = ((100, 100), (200, 125), (500, 150), (1000, 180))
+    full_blocks, remainder = divmod(total_papers, 1000)
+    total = full_blocks * slabs[-1][1]
+    if remainder:
+        for limit, cost in slabs:
+            if remainder <= limit:
+                total += cost
+                break
+    return total
 
 def _bill_book_round_off(amount):
     rounded = js_round(amount)
@@ -150,31 +158,37 @@ def _bill_book_round_off(amount):
 
 
 def _bill_book_price(qty, job, variant, size):
-    variant, size = variant.lower(), size.lower()
+    # Normalize the database values before applying size-specific paper rates.
+    # A6 must use one-quarter of the configured A4 original and duplicate rates.
+    variant = str(variant or "").strip().casefold()
+    size = str(size or "").strip().casefold()
+    size_key = "legal" if "legal" in size else "a6" if size == "a6" or size.startswith("a6 ") else "a5" if size == "a5" or size.startswith("a5 ") else "a4"
+
     total_books = qty
     total_papers = total_books * 100
-    is_legal, is_a5, is_a6 = "legal" in size, "a5" in size, "a6" in size
+    is_legal = size_key == "legal"
+    is_a5 = size_key == "a5"
+    is_a6 = size_key == "a6"
 
-    if is_legal:
-        original = float(BILL_BOOK_PAPER_RATES["legal_original"])
-        duplicate = float(BILL_BOOK_PAPER_RATES["legal_duplicate"])
+    rates = get_paper_rates()  # typed in Settings > Paper Price
+    if size_key == "legal":
+        original = rates["legal_original"]
+        duplicate = rates["legal_duplicate"]
         design = BILL_BOOK_DESIGN_CHARGES["legal"]
     else:
-        base_original = float(BILL_BOOK_PAPER_RATES["low_original"] if "low" in variant else BILL_BOOK_PAPER_RATES["standard_original"])
-        base_duplicate = float(BILL_BOOK_PAPER_RATES["duplicate"])
-        if is_a5:
-            original, duplicate, design = base_original / 2, base_duplicate / 2, BILL_BOOK_DESIGN_CHARGES["a5"]
-        elif is_a6:
-            original, duplicate, design = base_original / 4, base_duplicate / 4, BILL_BOOK_DESIGN_CHARGES["a6"]
-        else:
-            original, duplicate, design = base_original, base_duplicate, BILL_BOOK_DESIGN_CHARGES["a4"]
+        base_original = rates["low_original"] if "low" in variant else rates["standard_original"]
+        base_duplicate = rates["duplicate"]
+        size_divisor = 4 if size_key == "a6" else 2 if size_key == "a5" else 1
+        original = base_original / size_divisor
+        duplicate = base_duplicate / size_divisor
+        design = BILL_BOOK_DESIGN_CHARGES[size_key]
 
     paper_rate = original + duplicate if ("dupl" in variant or "50p-30p" in variant or "70p-50p" in variant) else original
     paper_cost = js_round(total_papers * paper_rate * 100) / 100
     print_cost = _bill_book_print_cost(total_papers, is_legal, is_a5, is_a6)
     design_charge = design if total_books > 0 else 0
 
-    binding_key = "legal" if is_legal else "a5" if is_a5 else "a6" if is_a6 else "a4"
+    binding_key = size_key
     binding = next(rate for limit, rate in BILL_BOOK_BINDING_SLABS[binding_key]
                    if limit is None or total_books <= limit)
 
@@ -187,7 +201,8 @@ def _notice_price(qty, job, size, variant):
     size, variant = size.lower(), variant.lower()
     is_legal = "legal" in size or "lgl" in size
     is_a5 = "a5" in size
-    paper_rate = 0.6 if is_legal else 0.21 if is_a5 else 0.42
+    rates = get_paper_rates()  # Notice paper = the original paper price (A5 = half)
+    paper_rate = rates["legal_original"] if is_legal else rates["standard_original"] / 2 if is_a5 else rates["standard_original"]
     paper_cost = js_round(qty * paper_rate * 100) / 100
     design = (200 if is_legal else 100 if is_a5 else 150) if qty > 0 else 0
 
@@ -613,16 +628,24 @@ def estimate_for(p):
         variant = variant_obj.name.lower()
         rule = get_code_price_rule(category_obj.name, size_obj.name, variant_obj.name, qty)
         latest = rule or get_latest_price_rule(category_obj.name, size_obj.name, variant_obj.name)
-        if latest is None:
+
+        # Formula-priced services (especially Bill Book) must not depend on a
+        # database PriceRule existing for every size/variant. A6 variants may
+        # be valid dropdown entries without their own legacy PriceRule row.
+        # Requiring `latest` here silently falls back to customer-side pricing
+        # in the billing preview, which is why A6 showed the old ₹290 amount.
+        formula_priced = _is_formula(category)
+        if latest is None and not formula_priced:
             return NO_PRICE
+
         db_price = float(rule.price or 0) if rule else 0.0
-        if db_price <= 0 and not _is_formula(category):
+        if db_price <= 0 and not formula_priced:
             return NO_PRICE
 
         gross = _normal_gross(category, size, variant, qty, db_price)
         if gross <= 0:
             return NO_PRICE
-        pct = _shop_discount_percent(category, qty, float(latest.shop_discount or 0))
+        pct = _shop_discount_percent(category, qty, float(latest.shop_discount or 0) if latest else 0)
         total = gross - gross * (pct / 100)
         return {"available": True, "estimate": custom_round(round2(total)), "discount_percent": pct}
 

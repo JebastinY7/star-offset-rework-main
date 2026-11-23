@@ -681,6 +681,8 @@ def get_latest_price_rule(category_name, size_name, variant_name):
 # Bill Book formula pricing configuration.
 # These values were moved from star_admin/shop_pricing_api.py without changing
 # the existing formula or amounts. Update them here when prices are approved.
+# Customer-side Bill Book tables remain unchanged. Shop-specific A4 and Legal
+# printing slabs are applied in star_admin.shop_pricing_api.
 BILL_BOOK_PRINT_COST_TABLES = {
     "a4": ((100, 150), (200, 180), (300, 200), (500, 250), (1000, 250), (2000, 500), (3000, 750), (4000, 1000), (5000, 1250), (10000, 2500)),
     "a5": ((100, 150), (200, 150), (300, 180), (500, 200), (1000, 250), (2000, 250), (3000, 500), (4000, 500), (5000, 750), (10000, 1250)),
@@ -696,10 +698,10 @@ BILL_BOOK_PAPER_RATES = {
     "legal_duplicate": "0.40",
 }
 
-BILL_BOOK_DESIGN_CHARGES = {"a4": 150, "a5": 100, "a6": 100, "legal": 200}
+BILL_BOOK_DESIGN_CHARGES = {"a4": 100, "a5": 100, "a6": 100, "legal": 200}
 BILL_BOOK_BINDING_SLABS = {
-    "legal": ((10, 60), (30, 50), (None, 40)),
-    "a5": ((10, 30), (30, 25), (None, 20)),
-    "a6": ((10, 20), (30, 15), (None, 12)),
-    "a4": ((10, 50), (30, 40), (None, 30)),
+    "legal": ((10, 48), (30, 40), (None, 32)),
+    "a5": ((10, 24), (30, 20), (None, 16)),
+    "a6": ((10, 16), (30, 12), (None, 10)),
+    "a4": ((10, 40), (30, 32), (None, 24)),
 }

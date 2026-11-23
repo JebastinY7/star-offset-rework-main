@@ -587,3 +587,19 @@ class ShopWalletTransaction(models.Model):
 
     def __str__(self):
         return f"{self.kind} {self.amount} - {self.wallet.shop.name}"
+
+
+
+# Paper price per sheet for Bill Book / Notice pricing. One row only - edited in
+# Settings > Paper Price (admin), so the rate can follow the market without a code change.
+# A5 = half and A6 = quarter of the A4 rate (done in the pricing code, not stored here).
+class PaperRate(models.Model):
+    standard_original = models.DecimalField(max_digits=8, decimal_places=4, default=0.42)  # A4 original paper
+    low_original = models.DecimalField(max_digits=8, decimal_places=4, default=0.35)       # A4 original paper, "low" print
+    duplicate = models.DecimalField(max_digits=8, decimal_places=4, default=0.30)          # A4 duplicate paper
+    legal_original = models.DecimalField(max_digits=8, decimal_places=4, default=0.60)     # Legal original paper
+    legal_duplicate = models.DecimalField(max_digits=8, decimal_places=4, default=0.40)    # Legal duplicate paper
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return "Paper rates"

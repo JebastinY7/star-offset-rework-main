@@ -2389,19 +2389,41 @@ def get_discount(request):
 @login_required
 def get_variants(request):
     size_id = request.GET.get("size_id")
+    size = Size.objects.select_related("category").filter(pk=size_id).first() if size_id else None
+
+    if not size:
+        return JsonResponse({"variants": []})
+
+    # Bill Book exposes only the two duplicate-print options for every size.
+    # Create missing size-specific rows (e.g. A6) so the existing billing
+    # form can load them. Other categories retain their original behavior.
+    if "bill book" in (size.category.name or "").casefold():
+        allowed = [("Dupl. Print", False), ("Dupl. Low Print", True)]
+        result = []
+        for order, (label, low_print) in enumerate(allowed):
+            variant = Variant.objects.filter(size=size, name__iexact=label).first()
+            if not variant:
+                candidates = Variant.objects.filter(
+                    size=size, name__icontains="dupl"
+                ).order_by("display_order", "name")
+                variant = next(
+                    (item for item in candidates
+                     if ("low" in item.name.casefold()) == low_print),
+                    None,
+                )
+            if not variant:
+                variant = Variant.objects.create(
+                    size=size, name=label, display_order=order
+                )
+            result.append({"id": variant.id, "name": label})
+        return JsonResponse({"variants": result})
 
     variants = Variant.objects.filter(
-        size_id=size_id
+        size=size
     ).order_by("display_order", "name")
 
     return JsonResponse({
-        "variants": [
-            {
-                "id": v.id,
-                "name": v.name
-            }
-            for v in variants
-        ]
+        "variants": [{"id": item.id, "name": item.name} for item in variants]
     })
 
 
