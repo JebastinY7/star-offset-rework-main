@@ -32,7 +32,7 @@ export default function OrderCart() {
   // payment method: wallet when it covers the total, otherwise online (the shop can still switch to online)
   const walletBal = Number(balance ?? 0);
   const walletOk = balance === null || walletBal >= total;
-  const method = pick === "online" || !walletOk ? "online" : "wallet";
+  const method = unpriced > 0 ? "quote" : (pick === "online" || !walletOk ? "online" : "wallet");
 
   const placeOrder = async () => {
     setError("");
@@ -61,7 +61,7 @@ export default function OrderCart() {
         }
       }
       const r = await api.post("/shop/orders/email/", fd);
-      setDone({ id: r.data.id, no: r.data.order_no, items: items.length, files: allFiles.length, online: paid });
+      setDone({ id: r.data.id, no: r.data.order_no, items: items.length, files: allFiles.length, online: paid, quoted: unpriced > 0 });
       clear();
       setForm({ deliveryDate: "", instructions: "" });
     } catch (e) {
@@ -83,7 +83,7 @@ export default function OrderCart() {
         <span className="done-icon"><Icon name="check" size={26} /></span>
         <h1>Order placed</h1>
         <p><b>{done.no}</b></p>
-        <p className="muted">Your order with {done.items} item{done.items !== 1 ? "s" : ""} and {done.files} artwork file{done.files !== 1 ? "s" : ""} has been submitted and paid {done.online ? "online" : "from your wallet"}.</p>
+        <p className="muted">Your order with {done.items} item{done.items !== 1 ? "s" : ""} and {done.files} artwork file{done.files !== 1 ? "s" : ""} has been submitted{done.quoted ? " for quotation. No wallet payment was taken." : ` and paid ${done.online ? "online" : "from your wallet"}`}.</p>
         <div className="done-actions">
           <Link to={`/orders/${done.id}`} className="btn-link primary">View Order</Link>
           <Link to="/orders" className="btn-link">My Orders</Link>
@@ -124,6 +124,7 @@ export default function OrderCart() {
                     <p className="ci-spec">
                       {(item.spec || []).map((s) => <span key={s.label}><em>{s.label}:</em> {s.value}</span>)}
                       <span><em>Quantity:</em> {Number(item.qty).toLocaleString("en-IN")}</span>
+                      {item.params?.kind === "visiting" && item.params?.visiting_card?.method === "offset" && <span><em>Jobs:</em> {Number(item.params.visiting_card.jobs || 1).toLocaleString("en-IN")}</span>}
                     </p>
                   </div>
                   <div className="ci-side">
@@ -160,6 +161,9 @@ export default function OrderCart() {
                   onChange={(e) => setForm((f) => ({ ...f, instructions: e.target.value }))} placeholder="Packing, delivery, paper preferences…" />
               </div>
 
+              {unpriced > 0 ? (
+                <div className="alert">This cart contains {unpriced} item(s) without a configured price. Submit the order for a quotation; no wallet or online payment will be taken now.</div>
+              ) : (
               <fieldset className="pm">
                 <legend>Payment method</legend>
                 <div className="pm-grid">
@@ -186,14 +190,15 @@ export default function OrderCart() {
                 </div>
                 {!walletOk && <Link to="/wallet" className="pm-add">Add money to wallet instead</Link>}
               </fieldset>
+              )}
             </div>
 
             <div className="cs-foot">
               <div className="cs-total"><span>Final total</span><b>{priced.length ? money(total) : "—"}</b></div>
               {error && <p className="alert error">{error}</p>}
-              <button type="button" className="primary big" disabled={sending || items.length === 0 || unpriced > 0} onClick={placeOrder}>
-                {sending ? (method === "online" ? "Waiting for payment…" : "Processing payment…")
-                  : method === "online" ? `Pay ${money(total)} Online & Place Order` : "Pay from Wallet & Place Order"}
+              <button type="button" className="primary big" disabled={sending || items.length === 0} onClick={placeOrder}>
+                {sending ? (method === "online" ? "Waiting for payment…" : "Submitting order…")
+                  : unpriced > 0 ? "Submit for Quotation" : method === "online" ? `Pay ${money(total)} Online & Place Order` : "Pay from Wallet & Place Order"}
               </button>
               <p className="muted small cs-note">
                 {method === "online"

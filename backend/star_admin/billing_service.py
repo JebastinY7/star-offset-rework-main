@@ -11,6 +11,7 @@ from django.db.models import Max
 from django.utils import timezone
 
 from .models import Bill, BillItem, Customer, Order, PointTransaction
+from .visiting_card_pricing import calculate_visiting_card_price
 
 
 PAYMENT_MODES = ("cash", "upi", "bank")
@@ -52,6 +53,31 @@ def save_bill_core(*, customer_id, items, bill_id=None, order_id=None,
         customer_type = "Shop"
     elif customer.is_member and customer.expiry_date and customer.expiry_date >= today:
         customer_type = "Member"
+
+    # Recalculate Visiting Card prices on the server before totals are computed.
+    # The customer/shop rate table is selected from the saved customer category.
+    rate_type = "shop" if (customer.category or "").strip().lower() == "shop" else "customer"
+    for item in items:
+        if item.get("billingType") == "visiting":
+            vc = item.get("visitingCard") if isinstance(item.get("visitingCard"), dict) else {}
+            if not vc:
+                raise BillingError("Visiting Card specifications are missing")
+            try:
+                calculated = calculate_visiting_card_price(
+                    gsm=vc.get("gsm"),
+                    size=vc.get("size"),
+                    qty=item.get("qty"),
+                    sides=vc.get("sides"),
+                    price_type=rate_type,
+                    method=vc.get("method"),
+                    lamination=vc.get("lamination", "Without Lamination"), jobs=item.get("job", vc.get("jobs", 1)),
+                )
+            except (TypeError, ValueError) as exc:
+                raise BillingError(str(exc))
+            item["price"] = calculated["unit_price"]
+            item["total"] = calculated["total"]
+            item["extraCharge"] = item.get("extraCharge", 0)
+            item["discount"] = item.get("discount", 0)
 
     extra_discount = D(extra_discount)
 
@@ -181,7 +207,17 @@ def save_bill_core(*, customer_id, items, bill_id=None, order_id=None,
             extra_charge=it.get("extraCharge", 0),
             extra_purpose=it.get("extraPurpose", ""),
         )
-        if btype == "manual":
+        if btype == "visiting":
+            vc = it.get("visitingCard") if isinstance(it.get("visitingCard"), dict) else {}
+            specifications = {"kind": "visiting_card", **vc}
+            BillItem.objects.create(
+                service_name=it.get("name") or "Visiting Card",
+                manual_name=it.get("name") or "Visiting Card",
+                specifications=specifications,
+                job=it.get("job", vc.get("jobs", 1)),
+                **common,
+            )
+        elif btype == "manual":
             name = it.get("name")
             BillItem.objects.create(
                 service_name=name, manual_name=name,

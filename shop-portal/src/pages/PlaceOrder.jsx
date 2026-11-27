@@ -5,6 +5,7 @@ import { useCart } from "../CartContext";
 import ArtworkPicker, { totalSize } from "../components/ArtworkPicker";
 import Icon from "../components/Icon";
 import ServiceConfigurator from "../components/ServiceConfigurator";
+import VisitingCardSetup from "../components/VisitingCardSetup";
 import { money, useServiceData } from "../serviceConfig";
 import "../orderflow.css";
 
@@ -27,8 +28,10 @@ export default function PlaceOrder() {
   }));
   const [files, setFiles] = useState([]);
   const [dtp, setDtp] = useState(() => ({ fontFamily: query.get("preferred_font") || "", fontSize: "", notes: "" }));
-  const { data, error } = useServiceData(choice);
+  const isVisitingCardChoice = choice === "visiting-card";
+  const { data, error } = useServiceData(isVisitingCardChoice ? "" : choice);
   const isDtp = (data?.name || "").trim().toLowerCase() === "dtp";
+  const isVisitingCard = isVisitingCardChoice || (data?.name || "").trim().toLowerCase() === "visiting card";
   const [round, setRound] = useState(0); // changes after each "Add to Cart" so the next item starts blank
   const [lastAdded, setLastAdded] = useState("");
 
@@ -83,6 +86,7 @@ export default function PlaceOrder() {
             {loadError && <p className="alert error">{loadError}</p>}
             <select value={choice} onChange={(e) => { setChoice(e.target.value); if (e.target.value !== preset?.service) setPreset(null); }} disabled={services === null} aria-label="Printing service">
               <option value="">{services === null ? "Loading services…" : "Select a printing service"}</option>
+              <option value="visiting-card">Visiting Card — configure options</option>
               {GROUPS.map((g) => {
                 const list = (services || []).filter((s) => s.kind === g.kind).sort((a, b) => a.name.localeCompare(b.name));
                 return list.length ? (
@@ -95,12 +99,40 @@ export default function PlaceOrder() {
             <p className="muted small">Want to compare rates first? <Link to="/prices">Browse printing prices</Link></p>
           </section>
 
+          {isVisitingCard && (
+          <VisitingCardSetup title="Visiting Card configuration" addLabel="Add Visiting Card to Cart"
+            priceType="shop" priceEndpoint="/shop/visiting-card-price/"
+            initial={query.get("visiting_card") === "1" ? {
+              method: query.get("method") || "", gsm: query.get("gsm") || "",
+              size: "3.5 x 2", lamination: query.get("lamination") || "Without Lamination",
+              sides: query.get("sides") || "", qty: query.get("qty") || "", jobs: query.get("jobs") || "1",
+            } : undefined}
+            onAdd={(item) => {
+              const vc = item.visitingCard;
+              const spec = [
+                { label: "Printing Type", value: vc.method === "digital" ? "Digital" : "Offset" },
+                ...(vc.method === "offset" ? [] : [
+                  { label: "GSM", value: vc.gsm },
+                  { label: "Size", value: vc.size },
+                ]),
+                { label: "Print Variant", value: vc.sides === "single" ? "Single side" : "Double side" },
+                { label: "Lamination", value: vc.lamination },
+                ...(vc.method === "offset" ? [{ label: "Jobs", value: String(vc.jobs || 1) }] : []),
+              ];
+              addItem({ kind: "visiting", service_name: "Visiting Card", qty: vc.qty, spec, params: { kind: "visiting", qty: vc.qty, visiting_card: vc }, estimate: item.estimate }, files);
+              setLastAdded(`Visiting Card × ${Number(vc.qty).toLocaleString("en-IN")}`);
+              setFiles([]);
+              setChoice("");
+              setPreset(null);
+              setRound((r) => r + 1);
+            }} />
+          )}
           {error && <p className="alert error">{error}</p>}
-          {choice && !data && !error && <p className="muted">Loading…</p>}
+          {choice && !isVisitingCard && !data && !error && <p className="muted">Loading…</p>}
 
           {data && (
             <>
-            <h2 className="pf-h"><span className="step-no">2</span> {data.name}: specifications and quantity</h2>
+            {!isVisitingCard && <h2 className="pf-h"><span className="step-no">2</span> {data.name}: specifications and quantity</h2>}
             {isDtp && (
               <section className="card pf-step dtp-preferences">
                 <h3>DTP typography preferences</h3>
@@ -112,7 +144,7 @@ export default function PlaceOrder() {
                 </div>
               </section>
             )}
-            <ServiceConfigurator key={choice} data={data} initial={preset?.service === choice ? preset : undefined}>
+            {!isVisitingCard && <ServiceConfigurator key={choice} data={data} initial={preset?.service === choice ? preset : undefined}>
               {(s) => (
                 <>
                   <section className="card pf-step">
@@ -127,7 +159,7 @@ export default function PlaceOrder() {
                   </div>
                 </>
               )}
-            </ServiceConfigurator>
+            </ServiceConfigurator>}
             </>
           )}
         </div>

@@ -40,6 +40,7 @@ from .serializers import (CustomerSerializer, bill_payload, offer_payload, order
                           quotation_payload, whatsapp_message_payload)
 from .utils import (download_whatsapp_media, format_phone, send_order_complete_message,
                     send_whatsapp_template, send_whatsapp_text)
+from .visiting_card_pricing import calculate_visiting_card_price
 
 
 def user_payload(user):
@@ -390,6 +391,21 @@ def billing_price(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def billing_visiting_card_price(request):
+    p = request.query_params
+    try:
+        result = calculate_visiting_card_price(
+            gsm=p.get("gsm"), size=p.get("size"), qty=p.get("qty"),
+            sides=p.get("sides", "single"), price_type=p.get("price_type", "customer"),
+            method=p.get("method"), lamination=p.get("lamination", "Without Lamination"), jobs=p.get("jobs", 1),
+        )
+    except ValueError as exc:
+        return Response({"available": False, "error": str(exc)}, status=400)
+    return Response(result)
+
+
+@api_view(["GET"])
 def billing_digital_gsm(request):
     cid = request.query_params.get("category_id")
     if not cid or cid == "undefined":
@@ -703,15 +719,28 @@ def _orders_queryset():
     return Order.objects.select_related("customer").prefetch_related(Prefetch("items", queryset=items))
 
 
-def _order_lines(raw_items):
-    """Request items -> unsaved OrderItem rows. Raises ValueError on bad data."""
+def _order_lines(raw_items, customer=None):
+    """Request items -> unsaved OrderItem rows. Visiting-card rates are recalculated server-side."""
     lines = []
     for it in raw_items:
         qty = int(Decimal(str(it.get("qty") or 0)))
         if qty <= 0:
             raise ValueError("Quantity must be more than 0")
 
-        if it.get("billingType") == "digital":
+        visiting_price = None
+        if it.get("billingType") == "visiting":
+            visiting = it.get("visitingCard") or {}
+            visiting_price = calculate_visiting_card_price(
+                gsm=visiting.get("gsm"), size=visiting.get("size"), qty=qty,
+                sides=visiting.get("sides", "single"),
+                price_type="shop" if (getattr(customer, "category", "") or "").lower() == "shop" else "customer",
+                method=visiting.get("method"),
+                lamination=visiting.get("lamination", "Without Lamination"), jobs=it.get("job", visiting.get("jobs", 1)),
+            )
+            line = OrderItem(
+                billing_type="normal", work_type="visiting_card", specifications=visiting,
+            )
+        elif it.get("billingType") == "digital":
             line = OrderItem(
                 billing_type="digital",
                 digital_category_id=it.get("categoryId") or None,
@@ -732,8 +761,12 @@ def _order_lines(raw_items):
             )
         line.qty = qty
         line.job = int(it.get("job") or 1)
-        line.price = Decimal(str(it.get("price") or 0))
-        line.total = Decimal(str(it.get("total") or 0))
+        if visiting_price:
+            line.price = Decimal(visiting_price["unit_price"])
+            line.total = Decimal(visiting_price["total"])
+        else:
+            line.price = Decimal(str(it.get("price") or 0))
+            line.total = Decimal(str(it.get("total") or 0))
         lines.append(line)
     return lines
 
@@ -768,7 +801,7 @@ def _save_order(request, order=None):
         return Response({"error": "Invalid status"}, status=400)
 
     try:
-        lines = _order_lines(d.get("items") or [])
+        lines = _order_lines(d.get("items") or [], customer=customer)
         advance = Decimal(str(d.get("advance_paid") or 0))
     except (ArithmeticError, ValueError, TypeError) as e:
         return Response({"error": f"Invalid order data ({e})"}, status=400)
@@ -990,7 +1023,13 @@ def _quotation_lines(raw_items):
             raise ValueError("Quantity must be more than 0")
         kind = it.get("billingType")
 
-        if kind == "manual":
+        if kind == "visiting":
+            vc = it.get("visitingCard") if isinstance(it.get("visitingCard"), dict) else {}
+            if not vc:
+                raise ValueError("Visiting Card specifications are missing")
+            line = QuotationItem(billing_type="normal", work_type="visiting_card", specifications=vc,
+                                 customer_type=str(vc.get("priceType") or "customer")[:20])
+        elif kind == "manual":
             name = (it.get("name") or "").strip()
             if not name:
                 raise ValueError("Manual items need a name")
@@ -1018,6 +1057,14 @@ def _quotation_lines(raw_items):
         line.job = max(int(Decimal(str(it.get("job") or 1))), 1)
         line.price = _quote_money(it.get("price"))
         line.total = _quote_money(it.get("total"))
+        if kind == "visiting":
+            price_result = calculate_visiting_card_price(
+                gsm=vc.get("gsm"), size=vc.get("size"), qty=qty,
+                sides=vc.get("sides", "single"), price_type=vc.get("priceType", "customer"),
+                method=vc.get("method"), lamination=vc.get("lamination", "Without Lamination"), jobs=it.get("job", vc.get("jobs", 1)),
+            )
+            line.price = Decimal(price_result["unit_price"])
+            line.total = Decimal(price_result["total"])
         lines.append(line)
     return lines
 

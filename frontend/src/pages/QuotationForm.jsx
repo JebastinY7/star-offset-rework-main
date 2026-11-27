@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import api, { errorText } from "../api";
 import { useAuth } from "../AuthContext";
 import CustomerForm from "../components/CustomerForm";
+import VisitingCardSetup from "../components/VisitingCardSetup";
 import { num } from "../lib/billing";
 import { previewDigital, previewNormal, round2 } from "../lib/pricing";
 import "./billing.css";
@@ -26,7 +27,7 @@ const emptyLists = { sizes: [], variants: [], gsms: [], products: [], lamination
 
 // "Visiting Card, Bill Book" - the list's Work column when the user does not type one
 const workFromItems = (items) =>
-  [...new Set(items.map((i) => (i.billingType === "manual" ? i.name : i.name.split(" - ")[0]).trim()).filter(Boolean))]
+  [...new Set(items.map((i) => (i.billingType === "manual" ? i.name : i.billingType === "visiting" ? "Visiting Card" : i.name.split(" - ")[0]).trim()).filter(Boolean))]
     .join(", ").slice(0, 200);
 
 export default function QuotationForm() {
@@ -57,6 +58,7 @@ export default function QuotationForm() {
   const [form, setForm] = useState(emptyForm);
   const [lists, setLists] = useState(emptyLists);
   const [preview, setPreview] = useState(null);
+  const [editingVisitingCard, setEditingVisitingCard] = useState(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(editing);
@@ -66,6 +68,7 @@ export default function QuotationForm() {
   const backTo = `/quotations?page=${sp.get("page") || 1}&q=${encodeURIComponent(sp.get("q") || "")}`;
   const leaveTo = editing ? backTo : "/quotations";
   const isManual = mode === "normal" && form.categoryId === "manual";
+  const isVisitingCard = mode === "normal" && form.categoryId === "visiting-card";
 
   const subtotal = useMemo(() => round2(items.reduce((s, i) => s + i.total, 0)), [items]);
   const discountAmt = Math.max(num(discount), 0);
@@ -88,7 +91,7 @@ export default function QuotationForm() {
       setExtraCharge(q.extra_charge ? String(q.extra_charge) : "");
       setQuotationDate(q.quotation_date);
       setValidUntil(q.valid_until || "");
-      setRateType(q.items.some((i) => i.billingType === "digital" && i.customerType === "shop") ? "shop" : "customer");
+      setRateType(q.items.some((i) => (i.billingType === "digital" || i.billingType === "visiting") && (i.customerType === "shop" || i.visitingCard?.priceType === "shop")) ? "shop" : "customer");
       setItems(q.items);
     }).catch((e) => setMsg(errorText(e))).finally(() => setLoading(false));
   }, [quotationId, editing]);
@@ -128,7 +131,7 @@ export default function QuotationForm() {
     const id = e.target.value;
     setForm((f) => ({ ...f, categoryId: id, sizeId: "", variantId: "", manualName: "", manualPrice: "" }));
     setLists((l) => ({ ...l, sizes: [], variants: [] }));
-    if (id && id !== "manual") load("/billing/sizes/", { category_id: id }, "sizes", (d) => d.sizes);
+    if (id && id !== "manual" && id !== "visiting-card") load("/billing/sizes/", { category_id: id }, "sizes", (d) => d.sizes);
   };
   const onSize = (e) => {
     const id = e.target.value;
@@ -140,7 +143,9 @@ export default function QuotationForm() {
     const id = e.target.value;
     setForm((f) => ({ ...f, dCategoryId: id, dGsmId: "", dProductId: "", dLaminationId: "" }));
     setLists((l) => ({ ...l, gsms: [], products: [], laminations: [] }));
-    if (id) load("/billing/digital-gsm/", { category_id: id }, "gsms", (d) => d.gsms);
+    if (id && nameOf(meta.digital_categories, id).trim().toLowerCase() !== "visiting card") {
+      load("/billing/digital-gsm/", { category_id: id }, "gsms", (d) => d.gsms);
+    }
   };
   const onDGsm = (e) => {
     const id = e.target.value;
@@ -154,7 +159,7 @@ export default function QuotationForm() {
     setLists((l) => ({ ...l, laminations: [] }));
     if (id) load("/billing/digital-laminations/", { product_id: id }, "laminations", (d) => d.laminations);
   };
-  const resetEntry = () => { setForm(emptyForm); setPreview(null); setLists(emptyLists); };
+  const resetEntry = () => { setForm(emptyForm); setPreview(null); setLists(emptyLists); setEditingVisitingCard(null); };
   const switchMode = (m) => { setMode(m); resetEntry(); };
 
   /* ---------- live price preview (list price, no discount) ---------- */
@@ -245,6 +250,12 @@ export default function QuotationForm() {
     const it = items[index];
     setMsg("");
 
+    if (it.billingType === "visiting") {
+      setEditIndex(index); setMode("normal"); setLists(emptyLists); setPreview(null);
+      setEditingVisitingCard(it.visitingCard || {});
+      setForm({ ...emptyForm, categoryId: "visiting-card", qty: String(it.qty), job: it.job || 1 });
+      return;
+    }
     if (it.billingType === "manual") {
       setEditIndex(index); setMode("normal"); setLists(emptyLists); setPreview(null);
       setForm({ ...emptyForm, categoryId: "manual", manualName: it.name, manualPrice: String(it.price), qty: String(it.qty), job: it.job || 1 });
@@ -374,8 +385,7 @@ export default function QuotationForm() {
           <div className="qt-entry-grid">
             <label>Billing type
               <select value={mode} onChange={(e) => switchMode(e.target.value)}>
-                <option value="normal">Normal Print</option>
-                <option value="digital">Digital Print</option>
+                <option value="normal">Print</option>
               </select>
             </label>
 
@@ -385,10 +395,14 @@ export default function QuotationForm() {
                   <select value={form.categoryId} onChange={onCategory}>
                     <option value="">Select</option>
                     <option value="manual">OTHERS</option>
+                    <option value="visiting-card">Visiting Card</option>
                     {meta.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </label>
-                {isManual ? (
+                {isVisitingCard ? (
+                  <div className="span2"><VisitingCardSetup title="Visiting Card configuration" addLabel="Add visiting card" initial={editingVisitingCard || undefined} priceType={rateType} allowRateTypeChange
+                    onAdd={(item) => commitItem({ ...item, billingType: "visiting" })} /></div>
+                ) : isManual ? (
                   <label className="span2">Item name
                     <input placeholder="Manual item name" value={form.manualName} onChange={set("manualName")} />
                   </label>
@@ -408,12 +422,14 @@ export default function QuotationForm() {
                     </label>
                   </>
                 )}
-                <label>Quantity
-                  <input type="number" min="1" placeholder="1" value={form.qty} onChange={set("qty")} />
-                </label>
-                <label>Job
-                  <input type="number" min="1" value={form.job} onChange={set("job")} />
-                </label>
+                {!isVisitingCard && <>
+                  <label>Quantity
+                    <input type="number" min="1" placeholder="1" value={form.qty} onChange={set("qty")} />
+                  </label>
+                  <label>Job
+                    <input type="number" min="1" value={form.job} onChange={set("job")} />
+                  </label>
+                </>}
               </>
             ) : (
               <>
@@ -423,60 +439,64 @@ export default function QuotationForm() {
                     {meta.digital_categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </label>
-                <label>GSM
-                  <select value={form.dGsmId} onChange={onDGsm} disabled={!form.dCategoryId}>
-                    <option value="">Select</option>
-                    {lists.gsms.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                  </select>
-                </label>
-                <label>Product
-                  <select value={form.dProductId} onChange={onDProduct} disabled={!form.dGsmId}>
-                    <option value="">Select</option>
-                    {lists.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                </label>
-                <label>Lamination
-                  <select value={form.dLaminationId} onChange={set("dLaminationId")} disabled={!form.dProductId}>
-                    <option value="">Select</option>
-                    {lists.laminations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-                  </select>
-                </label>
-                <label>Side
-                  <select value={form.dSide} onChange={set("dSide")}>
-                    <option value="">Select</option>
-                    <option value="single">Single Side</option>
-                    <option value="double">Double Side</option>
-                  </select>
-                </label>
-                <label>Delivery
-                  <select value={form.dDeliveryId} onChange={set("dDeliveryId")}>
-                    <option value="">Select</option>
-                    {meta.delivery_types.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                  </select>
-                </label>
-                <label>Quantity
-                  <input type="number" min="1" placeholder="1" value={form.dQty} onChange={set("dQty")} />
-                </label>
-                <label>Job
-                  <input type="number" min="1" value={form.dJob} onChange={set("dJob")} />
-                </label>
+                <>
+                    <label>GSM
+                      <select value={form.dGsmId} onChange={onDGsm} disabled={!form.dCategoryId}>
+                        <option value="">Select</option>
+                        {lists.gsms.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                      </select>
+                    </label>
+                    <label>Product
+                      <select value={form.dProductId} onChange={onDProduct} disabled={!form.dGsmId}>
+                        <option value="">Select</option>
+                        {lists.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                    </label>
+                    <label>Lamination
+                      <select value={form.dLaminationId} onChange={set("dLaminationId")} disabled={!form.dProductId}>
+                        <option value="">Select</option>
+                        {lists.laminations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                      </select>
+                    </label>
+                    <label>Side
+                      <select value={form.dSide} onChange={set("dSide")}>
+                        <option value="">Select</option>
+                        <option value="single">Single Side</option>
+                        <option value="double">Double Side</option>
+                      </select>
+                    </label>
+                    <label>Delivery
+                      <select value={form.dDeliveryId} onChange={set("dDeliveryId")}>
+                        <option value="">Select</option>
+                        {meta.delivery_types.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      </select>
+                    </label>
+                    <label>Quantity
+                      <input type="number" min="1" placeholder="1" value={form.dQty} onChange={set("dQty")} />
+                    </label>
+                    <label>Job
+                      <input type="number" min="1" value={form.dJob} onChange={set("dJob")} />
+                    </label>
+                  </>
               </>
             )}
 
-            <label>Price
-              <input type={manualPriceMode ? "number" : "text"} min="0" placeholder="Auto price" readOnly={!manualPriceMode}
-                value={manualPriceMode ? form.manualPrice : preview ? preview.price.toFixed(2) : ""}
-                onChange={set("manualPrice")} />
-            </label>
-            <label>Total
-              <input readOnly placeholder="Calculated total" value={preview ? round2(preview.gross).toFixed(2) : ""} />
-            </label>
+            {!isVisitingCard && <>
+              <label>Price
+                <input type={manualPriceMode ? "number" : "text"} min="0" placeholder="Auto price" readOnly={!manualPriceMode}
+                  value={manualPriceMode ? form.manualPrice : preview ? preview.price.toFixed(2) : ""}
+                  onChange={set("manualPrice")} />
+              </label>
+              <label>Total
+                <input readOnly placeholder="Calculated total" value={preview ? round2(preview.gross).toFixed(2) : ""} />
+              </label>
+            </>}
           </div>
 
-          <div className="qt-entry-actions">
+          {!isVisitingCard && <div className="qt-entry-actions">
             {editIndex >= 0 && <button type="button" onClick={cancelEdit}>Cancel Edit</button>}
             <button className="primary" type="button" onClick={addItem}>{editIndex >= 0 ? "Update Item" : "+ Add Item"}</button>
-          </div>
+          </div>}
 
           <h4 className="qt-items-head">Items added ({items.length})</h4>
           <div className="qt-items-wrap">

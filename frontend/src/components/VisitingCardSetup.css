@@ -1,0 +1,22 @@
+.vc-setup { padding: 18px; margin: 14px 0; }
+.vc-setup h3 { margin: 0 0 18px; }
+.vc-section-title { font-weight: 700; margin: 14px 0 10px; }
+.vc-methods { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.vc-method { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; padding: 14px; border: 1px solid var(--border,#444); border-radius: 12px; background: transparent; color: inherit; cursor: pointer; }
+.vc-method.selected { border-color: var(--primary,#d2a84a); box-shadow: inset 0 0 0 1px var(--primary,#d2a84a); }
+.vc-method-icon { font-size: 22px; }
+.vc-method small { color: var(--muted,#999); }
+.vc-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.vc-fields label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
+.vc-fields input,.vc-fields select,.vc-fields textarea { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border,#444); border-radius: 8px; background: var(--input-bg,transparent); color: inherit; font: inherit; }
+.vc-notes { grid-column: 1 / -1; }
+.vc-rate-toggle { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:12px 0; color:var(--muted,#999); font-size:13px; }
+.vc-rate-toggle button { padding:6px 12px; border:1px solid var(--border,#444); border-radius:20px; color:inherit; background:transparent; cursor:pointer; }
+.vc-rate-toggle button.active { color:var(--text,#fff); border-color:var(--primary,#d2a84a); background:color-mix(in srgb,var(--primary,#d2a84a) 14%,transparent); }
+.vc-price-preview { display:flex; align-items:center; flex-wrap:wrap; gap:14px; margin-top:14px; padding:12px 14px; border:1px solid var(--border,#444); border-radius:10px; color:var(--muted,#999); font-size:13px; }
+.vc-price-preview strong { color:inherit; }
+.vc-price-preview .vc-total { margin-left:auto; color:var(--text,#fff); font-size:15px; }
+.vc-price-error { color:#e57373; }
+.vc-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; }
+.vc-hint { color: var(--muted,#999); font-size: 12px; }
+@media(max-width:640px) { .vc-methods,.vc-fields { grid-template-columns: 1fr; } .vc-notes { grid-column:auto; } .vc-footer { align-items:flex-start; flex-direction:column; } .vc-price-preview .vc-total { margin-left:0; width:100%; } }

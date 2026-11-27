@@ -19,8 +19,16 @@ export default function Cart() {
   useEffect(() => {
     let live = true;
     Promise.all(items.map((i) =>
-      api.get("/shop/price/", { params: i.params })
-        .then((r) => [i.id, r.data.available ? r.data.estimate : null])
+      (i.params?.kind === "visiting"
+        ? api.get("/shop/visiting-card-price/", { params: {
+            gsm: i.params.visiting_card?.gsm, size: i.params.visiting_card?.size,
+            qty: i.params.qty, sides: i.params.visiting_card?.sides,
+            method: i.params.visiting_card?.method,
+            lamination: i.params.visiting_card?.lamination, price_type: "shop",
+            jobs: i.params.visiting_card?.jobs || 1,
+          } })
+        : api.get("/shop/price/", { params: i.params }))
+        .then((r) => [i.id, r.data.available ? Number(r.data.estimate ?? r.data.total) : null])
         .catch(() => null)))
       .then((pairs) => live && setFresh(Object.fromEntries(pairs.filter(Boolean))));
     return () => { live = false; };
@@ -89,7 +97,7 @@ export default function Cart() {
               <article className="card cart-item" key={i.id}>
                 <div className="ci-main">
                   <h3>{i.service_name}</h3>
-                  <p className="ci-spec">{i.spec.map((s) => <span key={s.label}><em>{s.label}:</em> {s.value}</span>)}<span><em>Quantity:</em> {i.qty.toLocaleString("en-IN")}</span></p>
+                  <p className="ci-spec">{i.spec.map((s) => <span key={s.label}><em>{s.label}:</em> {s.value}</span>)}<span><em>Quantity:</em> {i.qty.toLocaleString("en-IN")}</span>{i.params?.kind === "visiting" && i.params?.visiting_card?.method === "offset" && <span><em>Jobs:</em> {Number(i.params.visiting_card.jobs || 1).toLocaleString("en-IN")}</span>}</p>
                 </div>
                 <div className="ci-side">
                   <b className={priceOf(i) == null ? "ci-quote" : ""}>{priceOf(i) == null ? "Price on request" : money(priceOf(i))}</b>
