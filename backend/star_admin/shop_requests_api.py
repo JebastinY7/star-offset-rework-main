@@ -16,12 +16,14 @@ from rest_framework.response import Response
 from .models import ShopQuotationRequest, ShopQuotationRequestItem
 from .shop_portal_api import IsShopUser
 from .shop_pricing_api import _qty, describe, estimate_for
+from .visiting_card_pricing import calculate_visiting_card_price
 
 MAX_ITEMS = 50
 # only these keys are kept from the browser's item, and only as ids
 PARAM_KEYS = {
     "normal": ("kind", "service_id", "size_id", "variant_id", "qty"),
     "digital": ("kind", "lamination_id", "side", "delivery_id", "qty"),
+    "visiting": ("kind", "qty", "visiting_card"),
 }
 
 
@@ -30,6 +32,11 @@ def _clean(raw):
     params = raw.get("params") if isinstance(raw, dict) else None
     if not isinstance(params, dict) or params.get("kind") not in PARAM_KEYS:
         return None
+    if params["kind"] == "visiting":
+        vc = params.get("visiting_card")
+        if not isinstance(vc, dict):
+            return None
+        return {"kind": "visiting", "qty": params.get("qty"), "visiting_card": vc}
     return {k: params.get(k) for k in PARAM_KEYS[params["kind"]] if params.get(k) not in (None, "")} | {"kind": params["kind"]}
 
 
@@ -45,6 +52,34 @@ def shop_request_create(request):
     lines = []
     for n, raw in enumerate(raw_items, start=1):
         params = _clean(raw)
+        if params and params.get("kind") == "visiting":
+            vc = params.get("visiting_card") or {}
+            try:
+                qty = int(params.get("qty") or vc.get("qty") or 0)
+                price = calculate_visiting_card_price(
+                    gsm=vc.get("gsm"), size=vc.get("size"), qty=qty,
+                    sides=vc.get("sides", "single"), price_type="shop",
+                    method=vc.get("method"), lamination=vc.get("lamination", "Without Lamination"), jobs=vc.get("jobs", 1),
+                )
+            except (TypeError, ValueError) as exc:
+                return Response({"error": f"Item {n}: {exc}"}, status=400)
+            params["qty"] = qty
+            spec = [{"label": "Printing Method", "value": str(vc.get("method") or "").title()}]
+            if vc.get("method") != "offset":
+                spec.extend([
+                    {"label": "GSM", "value": str(vc.get("gsm") or "")},
+                    {"label": "Size", "value": str(vc.get("size") or "")},
+                ])
+            spec.extend([
+                {"label": "Print Variant", "value": "Single side" if vc.get("sides") == "single" else "Double side"},
+                {"label": "Lamination", "value": str(vc.get("lamination") or "Without Lamination")},
+            ])
+            if vc.get("method") == "offset":
+                spec.append({"label": "Jobs", "value": str(vc.get("jobs") or 1)})
+            if vc.get("designNotes"):
+                spec.append({"label": "Design notes", "value": str(vc.get("designNotes"))[:500]})
+            lines.append((params, ("Visiting Card", spec), price["total"]))
+            continue
         found = describe(params) if params else None
         if not found or _qty(params) is None:
             return Response({"error": f"Item {n} is no longer available. Please remove it from your cart and add it again."}, status=400)

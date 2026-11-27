@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import api, { errorText } from "../api";
 import Icon from "../components/Icon";
+import VisitingCardSetup from "../components/VisitingCardSetup";
 
 const PAGE_SIZE = 9;
 const KINDS = [
@@ -31,6 +32,8 @@ const isCombinedXeroxCategory = (name = "") =>
 
 export default function PrintingPrices() {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [selectedVisitingService, setSelectedVisitingService] = useState(null);
   const [services, setServices] = useState(null); // null = loading
   const [error, setError] = useState("");
 
@@ -68,10 +71,15 @@ export default function PrintingPrices() {
       from_price: Number.isFinite(minPrintPrice) ? minPrintPrice : null,
       searchTerms: "printing print black white black & white executive bond color colour inkjet laser",
     }] : [];
-    const list = [...printGroup, ...others].filter((s) => {
+    const visitingCard = {
+      key: "visiting-card", type: "visiting-card", kind: "visiting", id: 0,
+      name: "Visiting Card", description: "Digital or Offset printing with custom specifications",
+      from_price: null, searchTerms: "visiting card business card digital offset print",
+    };
+    const list = [...printGroup, visitingCard, ...others].filter((s) => {
       const matchesKind = !kind || (s.type === "printing-group"
         ? printItems.some((item) => item.kind === kind)
-        : s.kind === kind);
+        : s.type === "visiting-card" ? ["normal", "digital"].includes(kind) : s.kind === kind);
       const searchable = `${s.name || ""} ${s.searchTerms || ""}`.toLowerCase();
       return matchesKind && (!term || searchable.includes(term) ||
         (s.type === "printing-group" && ["bw", "b&w", "black and white", "black white", "bond", "inkjet", "laser", "colour", "color"].some((alias) => term.includes(alias))));
@@ -109,6 +117,26 @@ export default function PrintingPrices() {
         ))}
       </div>
 
+      {selectedVisitingService && (
+        <section className="card" style={{ marginBottom: 20 }}>
+          <div className="dash-h-row">
+            <h2 className="dash-h">Visiting Card configuration</h2>
+            <button type="button" className="btn-link" onClick={() => setSelectedVisitingService(null)}>Cancel</button>
+          </div>
+          <VisitingCardSetup title="Configure Visiting Card" addLabel="Continue to Place Order"
+            priceType="shop" priceEndpoint="/shop/visiting-card-price/"
+            onAdd={(item) => {
+              const vc = item.visitingCard;
+              const query = new URLSearchParams({
+                service: "visiting-card",
+                visiting_card: "1", method: vc.method, gsm: vc.gsm, size: vc.size,
+                lamination: vc.lamination, sides: vc.sides, qty: String(vc.qty), jobs: String(vc.jobs || 1),
+                design: vc.design, design_notes: vc.designNotes || "",
+              });
+              navigate(`/orders/new?${query.toString()}`);
+            }} />
+        </section>
+      )}
       <div className="dash-h-row">
         <h2 className="dash-h">Available Printing Services</h2>
         <label className="sort">Sort by:
@@ -130,7 +158,15 @@ export default function PrintingPrices() {
             <h3>{s.name}</h3>
             <p className="muted">{s.description}</p>
             <div className="from">{s.from_price != null ? <>From <b>{money(s.from_price)}</b></> : <span className="muted">Price varies by options</span>}</div>
-            <Link to={s.type === "printing-group" ? "/prices/printing" : `/prices/${s.kind}/${s.id}`} className="btn-link">View Price <Icon name="arrow" size={16} /></Link>
+            {s.type === "visiting-card" ? (
+              <button type="button" className="btn-link" onClick={() => { setSelectedVisitingService(s); window.scrollTo({ top: 0, behavior: "smooth" }); }}>View Price &amp; Configure <Icon name="arrow" size={16} /></button>
+            ) : s.name.trim().toLowerCase() === "visiting card" ? (
+              <button type="button" className="btn-link" onClick={() => { setSelectedVisitingService(s); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                Configure <Icon name="arrow" size={16} />
+              </button>
+            ) : (
+              <Link to={s.type === "printing-group" ? "/prices/printing" : `/prices/${s.kind}/${s.id}`} className="btn-link">View Price <Icon name="arrow" size={16} /></Link>
+            )}
           </div>
         ))}
       </div>

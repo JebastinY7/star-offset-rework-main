@@ -47,7 +47,10 @@ from .models import Bill, BillItem  # noqa: E402
 
 def bill_item_payload(i):
     """BillItem -> the shape the React billing screen works with."""
-    if i.digital_category_id:
+    visiting_card = i.specifications if isinstance(i.specifications, dict) and i.specifications.get("kind") == "visiting_card" else None
+    if visiting_card:
+        btype, cat, size, var = "visiting", None, None, None
+    elif i.digital_category_id:
         btype, cat, size, var = "digital print", i.digital_category_id, i.digital_gsm_id, i.digital_product_id
     elif i.manual_name:
         btype, cat, size, var = "manual", i.category_id, i.size_id, i.variant_id
@@ -59,6 +62,7 @@ def bill_item_payload(i):
         "id": i.id,
         "billingType": btype,
         "name": i.service_name,
+        "visitingCard": {k: v for k, v in visiting_card.items() if k != "kind"} if visiting_card else None,
         "categoryId": cat or "", "sizeId": size or "", "variantId": var or "",
         "laminationId": i.digital_lamination_id or "",
         "deliveryTypeId": i.delivery_type_id or "",
@@ -118,6 +122,7 @@ from .models import Order, OrderItem  # noqa: E402
 
 def order_item_payload(i):
     """OrderItem -> the shape the React order form / billing screen works with."""
+    vc = {}
     if i.billing_type == "digital":
         cat, size, var = i.digital_category_id, i.digital_gsm_id, i.digital_product_id
         parts = [i.digital_category, i.digital_gsm, i.digital_product, i.digital_lamination]
@@ -125,11 +130,21 @@ def order_item_payload(i):
         category_name = i.digital_category.name if i.digital_category_id else ""
     else:
         cat, size, var = i.category_id, i.size_id, i.variant_id
-        name = " - ".join(p.name for p in (i.category, i.size, i.variant) if p)
+        if (i.work_type or "") == "visiting_card":
+            vc = i.specifications if isinstance(i.specifications, dict) else {}
+            name = "Visiting Card — " + " · ".join([
+                f"Printing: {str(vc.get('method', '')).title()}",
+                f"GSM: {vc.get('gsm', '')}", f"Size: {vc.get('size', '')}",
+                f"Print Variant: {'Single side' if vc.get('sides') == 'single' else 'Double side'}",
+                f"Lamination: {vc.get('lamination', '')}", f"Quantity: {vc.get('qty', i.qty)}",
+            ])
+        else:
+            name = " - ".join(p.name for p in (i.category, i.size, i.variant) if p)
         category_name = i.category.name if i.category_id else ""
     return {
         "id": i.id,
-        "billingType": i.billing_type,
+        "billingType": "visiting" if (i.work_type or "") == "visiting_card" else i.billing_type,
+        "visitingCard": vc if (i.work_type or "") == "visiting_card" else None,
         "name": name or "Item",
         "categoryId": cat or "", "categoryName": category_name,
         "sizeId": size or "", "variantId": var or "",
@@ -182,7 +197,16 @@ def quotation_item_payload(i, delivery_names):
     delivery_id = i.work_type if (i.work_type or "").isdigit() else ""
     delivery_name = delivery_names.get(delivery_id, "")
 
-    if i.billing_type == "digital":
+    if (i.work_type or "") == "visiting_card":
+        btype, cat, size, var = "visiting", None, None, None
+        vc = i.specifications if isinstance(i.specifications, dict) else {}
+        name = "Visiting Card — " + " · ".join([
+            f"Printing: {str(vc.get('method', '')).title()}", f"GSM: {vc.get('gsm', '')}",
+            f"Size: {vc.get('size', '')}",
+            f"Print Variant: {'Single side' if vc.get('sides') == 'single' else 'Double side'}",
+            f"Lamination: {vc.get('lamination', '')}", f"Quantity: {vc.get('qty', i.qty)}",
+        ])
+    elif i.billing_type == "digital":
         btype, cat, size, var = "digital", i.digital_category_id, i.digital_gsm_id, i.digital_product_id
         parts = [i.digital_category, i.digital_gsm, i.digital_product, i.digital_lamination]
         name = " - ".join([p.name for p in parts if p] + [x for x in (i.side_name, delivery_name) if x])
@@ -202,6 +226,7 @@ def quotation_item_payload(i, delivery_names):
         "deliveryTypeId": int(delivery_id) if delivery_id else "",
         "side": i.side or "", "sideName": i.side_name or "",
         "customerType": i.customer_type or "",
+        "visitingCard": i.specifications if (i.work_type or "") == "visiting_card" else None,
         "qty": i.qty, "job": i.job,
         "price": float(i.price), "total": float(i.total),
     }

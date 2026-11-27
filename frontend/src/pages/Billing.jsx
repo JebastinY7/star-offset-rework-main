@@ -6,6 +6,7 @@ import { customerTypeOf, computeTotals, num } from "../lib/billing";
 import { discountPercent, previewDigital, previewNormal, round2 } from "../lib/pricing";
 import "./billing.css";
 import Icon from "../components/Icon";
+import VisitingCardSetup from "../components/VisitingCardSetup";
 
 const DRAFT_KEY = "star_bill_draft";
 const RECENT_KEY = "star_bill_recent"; // how often each category is billed -> "Quick add" chips
@@ -149,7 +150,7 @@ export default function Billing() {
           const discount = round2((gross * pct) / 100);
           return {
             ...it,
-            billingType: it.billingType === "digital" ? "digital print" : it.categoryId ? "normal print" : "manual",
+            billingType: it.billingType === "visiting" ? "visiting" : it.billingType === "digital" ? "digital print" : it.categoryId ? "normal print" : "manual",
             gross, discount, extraCharge: 0, extraPurpose: "", total: round2(gross - discount),
           };
         }));
@@ -173,7 +174,7 @@ export default function Billing() {
         // quotation prices are list prices: bill them as quoted (no extra discount)
         const lines = q.items.map((it) => ({
           ...it,
-          billingType: it.billingType === "digital" ? "digital print" : it.billingType === "manual" ? "manual" : "normal print",
+          billingType: it.billingType === "digital" ? "digital print" : it.billingType === "manual" ? "manual" : it.billingType === "visiting" ? "visiting" : "normal print",
           gross: it.total, discount: 0, extraCharge: 0, extraPurpose: "", total: it.total,
         }));
         // an overall quotation discount / extra charge is carried over as bill-level amounts
@@ -247,6 +248,17 @@ export default function Billing() {
     if (rows.length === 1) await chooseSize(String(rows[0].id));
   };
 
+  const chooseServiceSuggestion = (c) => {
+    if (c?.__visitingCard) {
+      setSvcText("Visiting Card");
+      setSvcOpen(false);
+      setMode("digital");
+      chooseDCategory(String(c.id));
+      return;
+    }
+    chooseCategory(c);
+  };
+
   const chooseDProduct = async (id) => {
     setForm((f) => ({ ...f, dProductId: id, dLaminationId: "" }));
     setLists((l) => ({ ...l, laminations: [] }));
@@ -264,7 +276,7 @@ export default function Billing() {
   const chooseDCategory = async (id) => {
     setForm((f) => ({ ...f, dCategoryId: id, dGsmId: "", dProductId: "", dLaminationId: "" }));
     setLists((l) => ({ ...l, gsms: [], products: [], laminations: [] }));
-    if (!id) return;
+    if (!id || nameOf(meta.digital_categories, id).trim().toLowerCase() === "visiting card") return;
     const rows = await load("/billing/digital-gsm/", { category_id: id }, "gsms", (d) => d.gsms);
     if (rows.length === 1) await chooseDGsm(String(rows[0].id));
   };
@@ -282,10 +294,14 @@ export default function Billing() {
 
   /* ---------- service search + quick add ---------- */
   const catSelected = Boolean(form.categoryId);
+  const isVisitingCard = mode === "digital" && nameOf(meta.digital_categories, form.dCategoryId).trim().toLowerCase() === "visiting card";
   const matches = useMemo(() => {
     const q = svcText.trim().toLowerCase();
-    return meta.categories.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 8);
-  }, [meta.categories, svcText]);
+    const rows = meta.categories.filter((c) => c.name.toLowerCase().includes(q));
+    const visiting = meta.digital_categories.find((c) => c.name.trim().toLowerCase() === "visiting card");
+    if (visiting && q && ["visiting card", "visting card", "business card"].some((term) => term.includes(q) || q.includes(term))) rows.unshift({ ...visiting, __visitingCard: true });
+    return rows.slice(0, 8);
+  }, [meta.categories, meta.digital_categories, svcText]);
   const quick = useMemo(
     () => [...meta.categories].sort((a, b) => (recent[b.id] || 0) - (recent[a.id] || 0)).slice(0, 6),
     [meta.categories, recent]
@@ -301,7 +317,7 @@ export default function Billing() {
     if (!svcOpen || matches.length === 0) return;
     if (e.key === "ArrowDown") { e.preventDefault(); setSvcIdx((i) => Math.min(i + 1, matches.length - 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setSvcIdx((i) => Math.max(i - 1, 0)); }
-    else if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); chooseCategory(matches[svcIdx] || matches[0]); }
+    else if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); chooseServiceSuggestion(matches[svcIdx] || matches[0]); }
     else if (e.key === "Escape") setSvcOpen(false);
   };
 
@@ -612,8 +628,8 @@ export default function Billing() {
             <div className="row between wrap">
               <p className="bl-title" style={{ margin: 0 }}>Add item</p>
               <div className="bl-seg">
-                {[["normal", "Print"], ["digital", "Digital"], ["manual", "Other"]].map(([k, label]) => (
-                  <button key={k} type="button" className={mode === k ? "on" : ""} onClick={() => switchMode(k)}>{label}</button>
+                {[["normal", "Print"], ["manual", "Other"]].map(([k, label]) => (
+                  <button key={k} type="button" className={(mode === "digital" ? "normal" : mode) === k ? "on" : ""} onClick={() => switchMode(k)}>{label}</button>
                 ))}
               </div>
             </div>
@@ -627,7 +643,7 @@ export default function Billing() {
                   {svcOpen && !catSelected && matches.length > 0 && (
                     <div className="suggest bl-pop">
                       {matches.map((c, i) => (
-                        <div key={c.id} className={`suggest-item${i === svcIdx ? " on" : ""}`} onMouseDown={() => chooseCategory(c)}>{c.name}</div>
+                        <div key={c.id} className={`suggest-item${i === svcIdx ? " on" : ""}`} onMouseDown={() => chooseServiceSuggestion(c)}>{c.name}</div>
                       ))}
                     </div>
                   )}
@@ -654,12 +670,20 @@ export default function Billing() {
             {mode === "digital" && (
               <>
                 <div className="bl-chips">
-                  {meta.digital_categories.map((c) => (
+                  {/* Visiting Card has its own setup form: show only that chip, never the other categories */}
+                  {meta.digital_categories.filter((c) => !isVisitingCard || String(c.id) === form.dCategoryId).map((c) => (
                     <button key={c.id} type="button" className={`bl-chip${String(c.id) === form.dCategoryId ? " on" : ""}`}
                       onClick={() => chooseDCategory(String(c.id))}>{c.name}</button>
                   ))}
+                  {isVisitingCard && <button type="button" className="link-btn" onClick={() => resetEntry("normal")}>Change</button>}
                 </div>
-                {form.dCategoryId && (
+                {form.dCategoryId && (isVisitingCard ? (
+                  <VisitingCardSetup priceType={custType === "shop" ? "shop" : "customer"} onAdd={(item) => {
+                    setItems((rows) => [...rows, { ...item, billingType: "visiting" }]);
+                    setMsg(""); setNotice("Visiting Card added with calculated price.");
+                    resetEntry("normal");
+                  }} />
+                ) : (
                   <>
                     <div className="bl-row">
                       {lists.gsms.length > 0 && <Pick label="GSM" list={lists.gsms} value={form.dGsmId} onChange={(e) => chooseDGsm(e.target.value)} />}
@@ -684,7 +708,7 @@ export default function Billing() {
                       <label>Qty<input ref={qtyRef} type="number" min="1" placeholder="Qty" value={form.qty} onChange={set("qty")} /></label>
                     </div>
                   </>
-                )}
+                ))}
               </>
             )}
 
@@ -697,7 +721,7 @@ export default function Billing() {
               </div>
             )}
 
-            {showExtras ? (
+            {!isVisitingCard && (showExtras ? (
               <div className="bl-row">
                 <label>Jobs<input type="number" min="1" value={form.job} onChange={set("job")} /></label>
                 <label>Extra charge ₹<input type="number" placeholder="0" value={form.extraCharge} onChange={set("extraCharge")} /></label>
@@ -705,9 +729,9 @@ export default function Billing() {
               </div>
             ) : (
               <button type="button" className="link-btn" style={{ alignSelf: "flex-start" }} onClick={() => setShowExtras(true)}>+ Extra charge / multiple jobs</button>
-            )}
+            ))}
 
-            <div className="bl-add">
+            {!isVisitingCard && <div className="bl-add">
               <div className="bl-readout grow">
                 {preview ? (
                   <>
@@ -718,7 +742,7 @@ export default function Billing() {
                 ) : <span className="muted">Pick the service and qty — the price fills in automatically.</span>}
               </div>
               <button type="button" className="primary big" onClick={addItem}>+ Add</button>
-            </div>
+            </div>}
             {totals.remainingOldDue > 0 && <div className="muted">Item discounts are off while an old due is pending. Collect the old due on the right to apply them.</div>}
           </div>
 

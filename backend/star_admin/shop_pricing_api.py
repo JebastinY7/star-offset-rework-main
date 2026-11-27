@@ -25,6 +25,7 @@ from pricing.code_prices import (
 from pricing.code_prices import iter_price_rules, get_price_rule as get_code_price_rule, get_latest_price_rule, get_price_rules
 
 from .shop_portal_api import IsShopUser
+from .visiting_card_pricing import calculate_visiting_card_price
 
 MAX_QTY = 1_000_000
 FORMULA_CATEGORIES = ("print out", "bill book", "notice")  # priced by formula, not only by the table
@@ -671,6 +672,21 @@ def describe(p):
         return pretty(lam.product.gsm.category.name), spec
 
     return None
+
+
+@api_view(["GET"])
+@permission_classes([IsShopUser])
+def shop_visiting_card_price(request):
+    p = request.query_params
+    try:
+        result = calculate_visiting_card_price(
+            gsm=p.get("gsm"), size=p.get("size"), qty=p.get("qty"),
+            sides=p.get("sides", "single"), price_type="shop",
+            method=p.get("method"), lamination=p.get("lamination", "Without Lamination"), jobs=p.get("jobs", 1),
+        )
+    except ValueError as exc:
+        return Response({"available": False, "error": str(exc)}, status=400)
+    return Response(result)
 
 
 @api_view(["GET"])

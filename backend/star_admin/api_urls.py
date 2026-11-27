@@ -27,6 +27,7 @@ urlpatterns = [
     path("billing/digital-products/", api_views.billing_digital_products),
     path("billing/digital-laminations/", api_views.billing_digital_laminations),
     path("billing/digital-price/", api_views.billing_digital_price),
+    path("billing/visiting-card-price/", api_views.billing_visiting_card_price),
     # bills
     path("bills/", api_views.bills),
     path("bills/export/", api_views.bills_export),
@@ -90,6 +91,7 @@ urlpatterns = [
     path("shop/services/", shop_pricing_api.shop_services),
     path("shop/services/<str:kind>/<int:pk>/", shop_pricing_api.shop_service_detail),
     path("shop/price/", shop_pricing_api.shop_price),
+    path("shop/visiting-card-price/", shop_pricing_api.shop_visiting_card_price),
     path("shop/requests/", shop_requests_api.shop_request_create),
     path("shop/orders/email/", shop_orders_api.shop_order_email),
     path("shop/wallet/", wallet_api.wallet_summary),
