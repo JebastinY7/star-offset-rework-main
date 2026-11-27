@@ -8,6 +8,7 @@ import { previewDigital, previewNormal, round2 } from "../lib/pricing";
 import "./billing.css";
 import "./orders.css";
 import Icon from "../components/Icon";
+import VisitingCardSetup from "../components/VisitingCardSetup";
 
 // Add order  = /orders/new
 // Edit order = /orders/:orderId/edit   (admin only)
@@ -70,6 +71,7 @@ export default function OrderForm() {
   const [svcOpen, setSvcOpen] = useState(false);
   const [svcIdx, setSvcIdx] = useState(0);
   const [showJobs, setShowJobs] = useState(false);
+  const [editingVisitingCard, setEditingVisitingCard] = useState(null);
   const [msg, setMsg] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -166,6 +168,17 @@ export default function OrderForm() {
     if (rows.length === 1) await chooseSize(String(rows[0].id));
   };
 
+  const chooseServiceSuggestion = (c) => {
+    if (c?.__visitingCard) {
+      setSvcText("Visiting Card");
+      setSvcOpen(false);
+      setMode("digital");
+      chooseDCategory(String(c.id));
+      return;
+    }
+    chooseCategory(c);
+  };
+
   const chooseDProduct = async (id) => {
     setForm((f) => ({ ...f, dProductId: id, dLaminationId: "" }));
     setLists((l) => ({ ...l, laminations: [] }));
@@ -183,7 +196,7 @@ export default function OrderForm() {
   const chooseDCategory = async (id) => {
     setForm((f) => ({ ...f, dCategoryId: id, dGsmId: "", dProductId: "", dLaminationId: "" }));
     setLists((l) => ({ ...l, gsms: [], products: [], laminations: [] }));
-    if (!id) return;
+    if (!id || nameOf(meta.digital_categories, id).trim().toLowerCase() === "visiting card") return;
     const rows = await load("/billing/digital-gsm/", { category_id: id }, "gsms", (d) => d.gsms);
     if (rows.length === 1) await chooseDGsm(String(rows[0].id));
   };
@@ -196,16 +209,20 @@ export default function OrderForm() {
   const resetEntry = (nextMode = mode) => {
     setMode(nextMode);
     setForm({ ...emptyForm, dDeliveryId: meta.delivery_types.length === 1 ? String(meta.delivery_types[0].id) : "" });
-    setPreview(null); setLists(emptyLists); setSvcText(""); setSvcOpen(false); setShowJobs(false);
+    setPreview(null); setLists(emptyLists); setSvcText(""); setSvcOpen(false); setShowJobs(false); setEditingVisitingCard(null);
   };
   const switchMode = (m) => { resetEntry(m); if (m === "normal") focusService(); };
 
   /* ---------- service search + quick add ---------- */
   const catSelected = Boolean(form.categoryId);
+  const isVisitingCard = mode === "digital" && nameOf(meta.digital_categories, form.dCategoryId).trim().toLowerCase() === "visiting card";
   const matches = useMemo(() => {
     const q = svcText.trim().toLowerCase();
-    return meta.categories.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 8);
-  }, [meta.categories, svcText]);
+    const rows = meta.categories.filter((c) => c.name.toLowerCase().includes(q));
+    const visiting = meta.digital_categories.find((c) => c.name.trim().toLowerCase() === "visiting card");
+    if (visiting && q && ["visiting card", "visting card", "business card"].some((term) => term.includes(q) || q.includes(term))) rows.unshift({ ...visiting, __visitingCard: true });
+    return rows.slice(0, 8);
+  }, [meta.categories, meta.digital_categories, svcText]);
   const quick = useMemo(
     () => [...meta.categories].sort((a, b) => (recent[b.id] || 0) - (recent[a.id] || 0)).slice(0, 6),
     [meta.categories, recent]
@@ -221,7 +238,7 @@ export default function OrderForm() {
     if (!svcOpen || matches.length === 0) return;
     if (e.key === "ArrowDown") { e.preventDefault(); setSvcIdx((i) => Math.min(i + 1, matches.length - 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setSvcIdx((i) => Math.max(i - 1, 0)); }
-    else if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); chooseCategory(matches[svcIdx] || matches[0]); }
+    else if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); chooseServiceSuggestion(matches[svcIdx] || matches[0]); }
     else if (e.key === "Escape") setSvcOpen(false);
   };
 
@@ -300,6 +317,16 @@ export default function OrderForm() {
 
   const editItem = async (index) => {
     const it = items[index];
+    if (it.billingType === "visiting") {
+      const visitingCategory = meta.digital_categories.find((c) => c.name.trim().toLowerCase() === "visiting card");
+      if (!visitingCategory) { setMsg("Visiting Card setup is unavailable. Please refresh the page."); return; }
+      setItems((list) => list.filter((_, i) => i !== index));
+      setMsg(""); setShowJobs(false); setEditingVisitingCard(it.visitingCard || {});
+      setRateType(it.visitingCard?.priceType === "shop" ? "shop" : "customer");
+      setMode("digital"); setSvcText("");
+      setForm({ ...emptyForm, dCategoryId: String(visitingCategory.id), qty: String(it.qty) });
+      return;
+    }
     if (!it.categoryId) { setMsg("This item's category no longer exists. Remove it and add it again."); return; }
     setItems((list) => list.filter((_, i) => i !== index));
     setMsg("");
@@ -514,8 +541,8 @@ export default function OrderForm() {
         <div className="od-sec-head">
           <h3>3. Print items</h3>
           <div className="bl-seg">
-            {[["normal", "Print"], ["digital", "Digital"]].map(([k, label]) => (
-              <button key={k} type="button" className={mode === k ? "on" : ""} onClick={() => switchMode(k)}>{label}</button>
+            {[["normal", "Print"]].map(([k, label]) => (
+              <button key={k} type="button" className={(mode === "digital" ? "normal" : mode) === k ? "on" : ""} onClick={() => switchMode(k)}>{label}</button>
             ))}
           </div>
         </div>
@@ -529,7 +556,7 @@ export default function OrderForm() {
                 {svcOpen && !catSelected && matches.length > 0 && (
                   <div className="suggest bl-pop">
                     {matches.map((c, i) => (
-                      <div key={c.id} className={`suggest-item${i === svcIdx ? " on" : ""}`} onMouseDown={() => chooseCategory(c)}>{c.name}</div>
+                      <div key={c.id} className={`suggest-item${i === svcIdx ? " on" : ""}`} onMouseDown={() => chooseServiceSuggestion(c)}>{c.name}</div>
                     ))}
                   </div>
                 )}
@@ -555,13 +582,18 @@ export default function OrderForm() {
 
           {mode === "digital" && (
             <>
-              <div className="bl-chips">
+              {!isVisitingCard && <div className="bl-chips">
                 {meta.digital_categories.map((c) => (
                   <button key={c.id} type="button" className={`bl-chip${String(c.id) === form.dCategoryId ? " on" : ""}`}
                     onClick={() => chooseDCategory(String(c.id))}>{c.name}</button>
                 ))}
-              </div>
-              {form.dCategoryId && (
+              </div>}
+              {form.dCategoryId && (isVisitingCard ? (
+                <VisitingCardSetup initial={editingVisitingCard || undefined} priceType={rateType} onAdd={(item) => {
+                  setItems((rows) => [...rows, item]);
+                  setMsg(""); setNotice("Visiting Card added with calculated price."); resetEntry("normal");
+                }} />
+              ) : (
                 <>
                   <div className="bl-row">
                     {lists.gsms.length > 0 && <Pick label="GSM" list={lists.gsms} value={form.dGsmId} onChange={(e) => chooseDGsm(e.target.value)} />}
@@ -590,19 +622,19 @@ export default function OrderForm() {
                     <label>Quantity<input ref={qtyRef} type="number" min="1" placeholder="Qty" value={form.qty} onChange={set("qty")} /></label>
                   </div>
                 </>
-              )}
+              ))}
             </>
           )}
 
-          {showJobs ? (
+          {!isVisitingCard && (showJobs ? (
             <div className="bl-row">
               <label>Jobs<input type="number" min="1" value={form.job} onChange={set("job")} /></label>
             </div>
           ) : (
             <button type="button" className="link-btn" style={{ alignSelf: "flex-start" }} onClick={() => setShowJobs(true)}>+ Multiple jobs</button>
-          )}
+          ))}
 
-          <div className="bl-add">
+          {!isVisitingCard && <div className="bl-add">
             <div className="bl-readout grow">
               {preview ? (
                 <>
@@ -612,7 +644,7 @@ export default function OrderForm() {
               ) : <span className="muted">Pick the service and quantity — the price fills in automatically.</span>}
             </div>
             <button type="button" className="primary big" onClick={addItem}>+ Add</button>
-          </div>
+          </div>}
 
           <div className="table-wrap" style={{ padding: 0 }}>
             <table className="od-items-table">

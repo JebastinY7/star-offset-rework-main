@@ -73,6 +73,7 @@ class BillItem(models.Model):
     side = models.CharField(max_length=20, blank=True, null=True)
     side_name = models.CharField(max_length=50, blank=True, null=True)
     manual_name = models.CharField(max_length=255, blank=True, null=True)
+    specifications = models.JSONField(default=dict, blank=True)
 
     delivery_type = models.ForeignKey(DeliveryType, on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -241,6 +242,7 @@ class OrderItem(models.Model):
     customer_type = models.CharField(max_length=20, blank=True, null=True)
 
     work_type = models.CharField(max_length=20, blank=True, null=True)
+    specifications = models.JSONField(default=dict, blank=True)
 
     side = models.CharField(max_length=20, null=True, blank=True)
 
@@ -326,6 +328,7 @@ class QuotationItem(models.Model):
     digital_product = models.ForeignKey(DigitalProduct, on_delete=models.SET_NULL, null=True, blank=True)
     customer_type = models.CharField(max_length=20, blank=True)
     work_type = models.CharField(max_length=50, blank=True)
+    specifications = models.JSONField(default=dict, blank=True)
     digital_lamination = models.ForeignKey(DigitalLamination, on_delete=models.SET_NULL, null=True, blank=True)
 
     customer_type = models.CharField(max_length=20, blank=True, null=True)

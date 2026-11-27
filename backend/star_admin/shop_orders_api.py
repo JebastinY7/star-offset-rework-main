@@ -33,6 +33,7 @@ from .notification_models import notify
 from .shop_portal_api import IsShopUser
 from .shop_pricing_api import _qty, describe, estimate_for
 from .shop_requests_api import MAX_ITEMS, _clean
+from .visiting_card_pricing import calculate_visiting_card_price
 
 logger = logging.getLogger(__name__)
 
@@ -80,11 +81,52 @@ def shop_order_email(request):
 
     lines, rows, total, any_price = [], [], Decimal(0), False
     for n, raw in enumerate(raw_items, start=1):
-        params = _clean(raw)
-        found = describe(params) if params else None
-        if not found or _qty(params) is None:
-            return Response({"error": f"Item {n} is no longer available. Please remove it from your cart and add it again."}, status=400)
-        name, spec = found
+        raw_params = raw.get("params") if isinstance(raw, dict) and isinstance(raw.get("params"), dict) else {}
+        if raw_params.get("kind") == "visiting":
+            vc = raw_params.get("visiting_card") or {}
+            try:
+                qty = int(vc.get("qty") or raw.get("qty") or 0)
+            except (TypeError, ValueError):
+                qty = 0
+            if qty < 1 or qty > 1000000:
+                return Response({"error": f"Item {n}: enter a valid visiting card quantity."}, status=400)
+            name = "Visiting Card"
+            spec = raw.get("spec") if isinstance(raw, dict) and isinstance(raw.get("spec"), list) else []
+            if not spec:
+                spec = [{"label": "Printing Method", "value": str(vc.get("method") or "").title()}]
+                if vc.get("method") != "offset":
+                    spec.extend([
+                        {"label": "GSM", "value": vc.get("gsm", "")},
+                        {"label": "Size", "value": vc.get("size", "")},
+                    ])
+                spec.extend([
+                    {"label": "Print Variant", "value": "Single side" if vc.get("sides") == "single" else "Double side"},
+                    {"label": "Lamination", "value": vc.get("lamination", "Without Lamination")},
+                ])
+                if vc.get("method") == "offset":
+                    spec.append({"label": "Jobs", "value": str(vc.get("jobs") or 1)})
+                if vc.get("designNotes"):
+                    spec.append({"label": "Design notes", "value": str(vc["designNotes"])[:500]})
+            spec = [x for x in spec if isinstance(x, dict) and x.get("label") and x.get("value")]
+            params = {"kind": "visiting", "qty": qty, "visiting_card": vc}
+            try:
+                price_result = calculate_visiting_card_price(
+                    gsm=vc.get("gsm"), size=vc.get("size"), qty=qty,
+                    sides=vc.get("sides", "single"), price_type="shop",
+                    method=vc.get("method"), lamination=vc.get("lamination", "Without Lamination"), jobs=vc.get("jobs", 1),
+                )
+            except ValueError as exc:
+                return Response({"error": f"Item {n}: {exc}"}, status=400)
+            est = Decimal(price_result["total"])
+            total += est
+            any_price = True
+        else:
+            params = _clean(raw)
+            found = describe(params) if params else None
+            if not found or _qty(params) is None:
+                return Response({"error": f"Item {n} is no longer available. Please remove it from your cart and add it again."}, status=400)
+            name, spec = found
+            est = None
         # DTP production preferences are user-entered metadata, never pricing inputs.
         # Validate and store them per item so the ERP order view and email show them.
         if name.strip().casefold() == "dtp":
@@ -106,12 +148,13 @@ def shop_order_email(request):
                     {"label": "Language", "value": language}]
             if notes:
                 spec.append({"label": "DTP Instructions", "value": notes})
-        price = estimate_for(params)
-        est = price["estimate"] if price["available"] else None
-        if est is None:
-            return Response({"error": f"A final price is not available for {name}. Please contact Star Offset before placing this order."}, status=400)
-        total += Decimal(est)
-        any_price = True
+        if params["kind"] != "visiting":
+            price = estimate_for(params)
+            est = price["estimate"] if price["available"] else None
+            if est is None:
+                return Response({"error": f"A final price is not available for {name}. Please contact Star Offset before placing this order."}, status=400)
+            total += Decimal(est)
+            any_price = True
         names = [f.name for f in item_files[n - 1]]
         rows.append({"kind": params["kind"], "service_name": name, "spec": spec, "params": params, "qty": int(params["qty"]),
                      "estimate": Decimal(est) if est is not None else None,
@@ -120,7 +163,7 @@ def shop_order_email(request):
             f"Item {n}: {name}",
             f"Quantity: {int(params['qty']):,}",
             "Specifications: " + (", ".join(f"{s['label']}: {s['value']}" for s in spec) or "Not specified"),
-            "Final price: " + _money(est),
+            "Final price: " + (_money(est) if est is not None else "To be quoted"),
             "Artwork files: " + (", ".join(names) if names else "None"),
         ]))
 
@@ -138,19 +181,26 @@ def shop_order_email(request):
     saved_paths = []  # private copies of the artwork; removed again if the order fails
     try:
         with transaction.atomic():
-            wallet, _ = ShopWallet.objects.get_or_create(shop=shop)
-            wallet = ShopWallet.objects.select_for_update().get(pk=wallet.pk)
-            if wallet.balance < total:
-                raise ValueError(f"Insufficient wallet balance. Order total is ₹{total:,.2f}; wallet balance is ₹{wallet.balance:,.2f}. Add money to your wallet and try again.")
-            wallet.balance -= total
-            wallet.save(update_fields=["balance", "updated_at"])
-            order = ShopOrder.objects.create(shop=shop, items_count=len(rows), total_amount=total, final_amount=total,
-                status="payment_confirmed", payment_method="wallet", payment_reference="Wallet debit pending", payment_confirmed_at=timezone.now(),
-                delivery_date=delivery_on, instructions=notes_raw)
-            ShopWalletTransaction.objects.create(wallet=wallet, kind="debit", amount=total, status="completed",
-                reference=order.order_no if hasattr(order, "order_no") else f"ORD-{order.id:04d}", description=f"Payment for printing order ORD-{order.id:04d}", completed_at=timezone.now())
-            order.payment_reference = f"WALLET-ORD-{order.id:04d}"
-            order.save(update_fields=["payment_reference", "updated_at"])
+            has_unpriced = any(row.get("estimate") is None for row in rows)
+            if has_unpriced:
+                # Never debit the shop wallet for a cart containing an unpriced item.
+                order = ShopOrder.objects.create(shop=shop, items_count=len(rows), total_amount=Decimal("0"), final_amount=None,
+                    status="submitted", payment_method="", payment_reference="",
+                    delivery_date=delivery_on, instructions=notes_raw)
+            else:
+                wallet, _ = ShopWallet.objects.get_or_create(shop=shop)
+                wallet = ShopWallet.objects.select_for_update().get(pk=wallet.pk)
+                if wallet.balance < total:
+                    raise ValueError(f"Insufficient wallet balance. Order total is ₹{total:,.2f}; wallet balance is ₹{wallet.balance:,.2f}. Add money to your wallet and try again.")
+                wallet.balance -= total
+                wallet.save(update_fields=["balance", "updated_at"])
+                order = ShopOrder.objects.create(shop=shop, items_count=len(rows), total_amount=total, final_amount=total,
+                    status="payment_confirmed", payment_method="wallet", payment_reference="Wallet debit pending", payment_confirmed_at=timezone.now(),
+                    delivery_date=delivery_on, instructions=notes_raw)
+                ShopWalletTransaction.objects.create(wallet=wallet, kind="debit", amount=total, status="completed",
+                    reference=f"ORD-{order.id:04d}", description=f"Payment for printing order ORD-{order.id:04d}", completed_at=timezone.now())
+                order.payment_reference = f"WALLET-ORD-{order.id:04d}"
+                order.save(update_fields=["payment_reference", "updated_at"])
             for n, row in enumerate(rows, start=1):
                 row["files"] = [save_artwork(order.order_no, n, f) for f in item_files[n - 1]]
                 saved_paths += [f["path"] for f in row["files"]]
@@ -166,7 +216,8 @@ def shop_order_email(request):
                 f"Phone: {shop.phone or 'Not available'}",
                 f"Number of items: {len(lines)}", "",
                 *[part for line in lines for part in (line, "")],
-                f"Final total (paid from shop wallet): {_money(total)}",
+                f"Final total: {'To be quoted' if any(row.get('estimate') is None for row in rows) else _money(total)}",
+                f"Payment: {'Pending quote and confirmation' if any(row.get('estimate') is None for row in rows) else 'Paid from shop wallet'}",
                 f"Required delivery date: {delivery}",
                 f"Additional instructions: {notes}",
                 f"Artwork files attached: {len(all_files)} (named Item<number>_<file name>)",
